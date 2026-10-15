@@ -52,6 +52,7 @@ flowchart TB
 Notes:
 - **Laser safety:** use a low-power module and never point it at eyes.
 - **Keep I²C short:** sensor, screen, clock and ESP32 all in one housing.
+- **USB-C for flashing:** the enclosure exposes the ESP32-S3 DevKit's UART/COM USB-C port (behind a cover) for firmware updates and the serial console. The charger board's USB-C is separate, for charging.
 - **Emissivity:** tire rubber is about 0.95; make it a setting.
 
 ## Firmware
