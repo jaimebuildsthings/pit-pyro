@@ -41,7 +41,7 @@ flowchart TB
 | --- | --- | --- |
 | MLX90640 breakout, **55° field of view (BAA)** | Covers ~26 cm at 25 cm, so the whole tread with margin. Range −40 to 300 °C | $55–75 |
 | ESP32-S3 DevKitC (N16R8) | Same board as corner-balancer. 16 MB flash holds thousands of runs | on hand |
-| **Small screen**: 0.96″ OLED (SSD1306, I²C) or 1.14″ color TFT (ST7789, SPI) | Next corner and last reading, readable in sunlight (OLED: high contrast; TFT: color zones) | $5–8 |
+| **Screen: 0.96″ OLED, 128×64 (SSD1306, I²C)** | Next corner and last reading; high contrast for daylight at autocross; shares the I²C bus with the sensor and clock | $5 |
 | **Clock module, DS3231** | Real timestamps on every run, kept on a coin cell while the device is off | $5 |
 | 1-cell LiPo, ~1000 mAh, + USB-C charger/protection board | Cordless, lasts an event day | $10 |
 | Momentary trigger button | Pull = capture; long-press = new run | $2 |
@@ -79,6 +79,5 @@ Reuse from corner-balancer: the console, the two-slot crash-safe flash record, t
 ## Open questions
 
 - 3 zones or 5? Pro pyrometers use 3; the array could do more.
-- OLED (contrast, cheap) or color TFT (zones shown as colors)?
 - Rust MLX90640 driver: an existing crate (license?) or a port of Melexis's Apache-2.0 driver.
 - Battery life target and sleep mode between scans.
