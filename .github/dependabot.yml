@@ -1,0 +1,12 @@
+# Dependabot version updates. Minor and patch bumps share one weekly PR; major
+# bumps open their own. Add the firmware's cargo directories when it lands.
+version: 2
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions-minor-patch:
+        update-types: [minor, patch]
