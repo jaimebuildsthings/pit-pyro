@@ -1,0 +1,112 @@
+# Enclosure (phase 2 prototype)
+
+A pistol-grip shell for the handheld scanner in [docs/plan.md](../../docs/plan.md). It is a parametric [OpenSCAD](https://openscad.org) model, [`enclosure.scad`](enclosure.scad), split down the middle into two halves that print flat without supports and screw together.
+
+![Cutaway: left half with the parts in place](images/cutaway.png)
+
+| Front: aperture and aiming dot | Rear: screen and USB cover |
+| --- | --- |
+| ![Front view](images/front.png) | ![Rear view](images/rear.png) |
+
+About 102 × 136 × 35 mm overall. The head has square edges. The grip is shaped for the hand:
+
+- **Length:** 88 mm below the head (`grip_l`), for four fingers of a medium to large hand.
+- **Section:** 47 × 35 mm, with its long edges rounded at 8 mm (`edge_r`), so it's close to an oval. The rounding finishes in a 45° bevel at each print bed, so the halves still print without supports, and the inside follows it so the wall stays 2.4 mm.
+- **Palm swell:** the backstrap bulges 3 mm where your palm sits (`swell`, `swell_v`).
+- **Flared butt:** the bottom widens 3 mm at the back and 2 mm at the front (`flare`, `flare_l`), so the device doesn't slide out of your hand.
+
+The sensor looks out through an **open aperture**: there's no window, because glass and clear plastic block thermal IR.
+
+## Layout
+
+| Where | What |
+| --- | --- |
+| Head, front | MLX90640 (bare TO39) on a perfboard carrier, its lens 1 mm behind the front face; the carrier's edges slide into rails |
+| Head, front top | Laser bore, tilted so the dot lands on the sensor axis 250 mm out (`aim_dist`) |
+| Head, middle | FeatherS3[D], USB end to the rear, its long edges in rails |
+| Head, top | 0.96″ OLED behind a bevelled window, readable when you look down at the device while aiming |
+| Head, right wall, rear | Piezo buzzer, with sound holes |
+| Head, rear | The Feather's USB-C (charging, firmware, serial console) behind a press-fit cover. It's the only port |
+| Grip, front top | Printed trigger: an 18 mm wide paddle filling an opening at the top of the grip's front, just under the head, hinged at its top on an M3 screw. The bottom swings in about 2.5 mm and presses a roller-lever microswitch held on pins behind it. The switch lever returns it; a shoulder below the opening is the rest stop and the switch cradle the full-pull stop |
+| Grip, left wall | 1200 mAh LiPo, from just under the head down, between two stops |
+| Grip, right wall | DS3231 clock board, between four corner stops, with room for a STEMMA QT plug at each end |
+
+## Wiring
+
+The I²C parts chain on STEMMA QT cables: Feather → clock → screen, and the sensor carrier on the Feather's second port.
+
+- **Sensor carrier:** a STEMMA QT to male-header cable (Adafruit 4209), its pins soldered into the perfboard.
+- **Clock:** a plug-to-plug cable (Adafruit 4210) from the Feather.
+- **Screen:** the board's STEMMA QT sockets point sideways, and the head has no room for a plug beside the screen. Instead, cut a 4210 cable in half and solder its wires to the screen's header holes: **Vin** (red), **GND** (black), **Data** = SDA (blue), **Clk** = SCL (yellow). Plug the other end into the clock's second socket.
+- **Feather:** solder the switch, buzzer and laser wires from the top and trim the leads flush underneath, because the rails hold the board's long edges (0.8 mm, `fth_edge`).
+
+## Measure your parts first
+
+Most dimensions come from datasheets and listings. Measure your actual parts with calipers and update the `/* [Parts] */` block before printing. Width and clearance changes ripple through the layout, so re-run the check afterwards (see [Changing the model](#changing-the-model)).
+
+| Parameter | Assumed | Most likely to be wrong |
+| --- | --- | --- |
+| `car`, `car_back`, `mlx_can_h` | 20.3 × 20.3 mm carrier (8 × 8 holes); 10 mm of parts behind it; lens face 5 mm above it | How high the sensor sits once soldered |
+| `fth`, `fth_top_h`, `usb_y` | 52.3 × 22.9 mm, 6.6 mm overall at the battery plug, USB-C centred | Where the USB-C sits across the board |
+| `oled_pcb`, `oled_win_dx` | Adafruit 326: 29.2 × 26.7 mm, active area 2 mm toward the header | Where the active area sits on the module |
+| `rtc` | Adafruit 5188: 25.4 × 17.8 mm, 8 mm thick with the coin cell | Thickness |
+| `bat` | Adafruit 258: 34 × 62 × 5 mm (5.5 allowing for swelling) | |
+| `laser_d`, `laser_l` | Adafruit 1054: 6 mm tube, 14 mm long | Length |
+| `buzzer_d`, `buzzer_h` | Adafruit 160 (PS1240): 12.2 mm, 7 mm tall | Height |
+| `sw`, `sw_hole_*`, `sw_lever` | Adafruit 819: 19.8 × 10.2 × 6.4 mm body, holes Ø2.3 at 9.5 mm, 2.9 mm from the terminal edge; roller 5 mm proud of the body | **The roller's free height** (`sw_lever`) and how far the switch travels before it clicks (`trig_travel`, 2.5 mm) |
+
+## Printing
+
+![Right half as it prints: outer face down, inserts, switch cradle and clock stops facing up](images/right-half.png)
+
+| File | Notes |
+| --- | --- |
+| [`stl/enclosure-left.stl`](stl/enclosure-left.stl) | Counterbored screw holes, alignment lip, battery stops |
+| [`stl/enclosure-right.stl`](stl/enclosure-right.stl) | Heat-set insert holes, switch cradle and pins, buzzer ring, clock stops |
+| [`stl/usb-cover.stl`](stl/usb-cover.stl) | Press-fit cover for the USB opening |
+| [`stl/trigger.stl`](stl/trigger.stl) | Trigger, printed on its side. If it rubs in its opening, sand its sides lightly |
+
+- The STLs are already oriented: flat outer face down, open side up. No supports, no brim needed.
+- PETG or ASA is best, since a car at an event sits in the sun and PLA softens around 55 °C. PLA is fine for a first fit check.
+- 0.2 mm layers, 3–4 perimeters, 20 % infill. Each half is about 102 × 136 mm.
+- The screw counterbores and the hinge nut pocket have two stepped bridging layers built in, so they print without support. Drill or cut them out if your slicer leaves a skin.
+- The switch pins on the right half are 2 mm thick and stand 20 mm off the bed. Print them slowly, or bump the infill so they come out solid.
+- If the cover is too tight or too loose, change `usb_cover_fit` and reprint just the cover.
+
+## Hardware
+
+- 5 × M3 × 20 socket head screws, plus 1 × M3 × 30 and an M3 nut for the trigger hinge
+- 5 × M3 heat-set inserts, about 4 mm OD × 5.7 mm long, pressed into the right half (`insert_d`, `insert_depth`)
+- Foam tape for the battery and the clock board
+
+## Assembly
+
+1. Press the heat-set inserts into the right half.
+2. Push the microswitch onto its pins in the right half, roller toward the trigger, with a drop of glue: nothing on the left half holds it on. Stick the clock board to the right wall between its stops, and the buzzer into its ring.
+3. Push the laser into its bore (a dab of glue holds it). Drop the boards into the left half: the sensor carrier and the Feather into their rails, the OLED into its slots. Stick the battery to the left wall between its stops.
+4. Fit the trigger into its opening and wire everything (see [Wiring](#wiring)). Keep the I²C runs short.
+5. Close the halves (the lip on the left half locates the right) and screw them together. The M3 × 30 goes through the trigger's hinge, into the nut recessed in the right side.
+
+The OLED's header ends up at the rear, so the image will be upside down unless the firmware rotates it 180°. The SSD1306 can do that with a register setting.
+
+## Changing the model
+
+Open `enclosure.scad` in OpenSCAD and press **F5** to preview. Use the `part` setting (or the Customizer panel) to switch between the `assembly`, `cutaway`, `left`, `right`, `usb_cover` and `trigger` views; `pull` (0 to 1) swings the trigger. Then export:
+
+```sh
+openscad --export-format binstl -D 'part="left"'      -o stl/enclosure-left.stl  enclosure.scad
+openscad --export-format binstl -D 'part="right"'     -o stl/enclosure-right.stl enclosure.scad
+openscad --export-format binstl -D 'part="usb_cover"' -o stl/usb-cover.stl       enclosure.scad
+openscad --export-format binstl -D 'part="trigger"'   -o stl/trigger.stl         enclosure.scad
+```
+
+`part="check"` is the fit check: it renders where the stand-in parts overlap the shell and where the two halves overlap each other. A clean design leaves only zero-thickness contact faces, such as boards resting in their slots. Run it after any layout change.
+
+To try a different grip length, change `grip_l` and re-run the check. The battery reaches 67 mm down the grip, so below about 84 mm the bottom screw boss runs into it and has to move. Below about 85 mm, a large hand's little finger hangs off the end anyway.
+
+## Open questions
+
+- **Grip feel.** The length, section and swell are from typical hand sizes. Print one in PLA and hold it before printing the real one: `grip_l`, `grip_angle`, `swell` and `flare` are the knobs. `grip_d` and `edge_r` are tied to the battery's width: rounder edges need a deeper grip.
+- **Screen placement.** Top of the head suits looking down at the device while aiming; a sloped rear face would be easier to read from behind. Worth trying both once the prototype is in hand.
+- **Trigger feel** depends on the microswitch's roller lever. If it's too light to return the trigger, add a small compression spring between the paddle and the cradle.
+- **Weather.** The open aperture and sound holes let dust in. A thin IR-transparent film over the aperture (germanium, or a thin polyethylene film) would need testing before use.
