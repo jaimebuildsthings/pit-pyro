@@ -1,4 +1,4 @@
-// Handheld tire temperature scanner: pistol-grip enclosure, v0.2 (phase 2 prototype)
+// Handheld tire temperature scanner: pistol-grip enclosure, v0.3 (phase 2 prototype)
 //
 // Units: mm. Model frame: +X points at the tire, +Z is up, Y runs across the
 // grip. The shell splits at Y = 0 into a left and a right half. Each half
@@ -8,13 +8,14 @@
 //          openscad --export-format binstl -D 'part="right"'     -o stl/enclosure-right.stl     enclosure.scad
 //          openscad --export-format binstl -D 'part="usb_cover"' -o stl/usb-cover.stl           enclosure.scad
 //          openscad --export-format binstl -D 'part="trigger"'   -o stl/trigger.stl             enclosure.scad
+//          openscad --export-format binstl -D 'part="btn_cap"'   -o stl/button-cap.stl          enclosure.scad
 // Parts:   assembly (closed shell), cutaway (left half + stand-in parts),
-//          left, right, usb_cover, trigger (each laid flat, ready to slice), check
+//          left, right, usb_cover, trigger, btn_cap (each laid flat, ready to slice), check
 //          (renders nothing but contact faces when every part fits).
 //
 // Licensed under CERN-OHL-P-2.0, see ../LICENSE.
 
-part = "assembly"; // [assembly, cutaway, left, right, usb_cover, trigger, check]
+part = "assembly"; // [assembly, cutaway, left, right, usb_cover, trigger, btn_cap, check]
 pull = 0;          // [0:0.1:1] trigger position in the views: 0 at rest, 1 fully pulled
 
 /* [Shell] */
@@ -34,18 +35,18 @@ car = [20.3, 20.3, 1.6];
 car_back = 10;        // room behind the carrier for the capacitors, joints and cable
 mlx_can_d = 9.2;
 mlx_can_h = 5.0;      // lens face above the carrier
-// Unexpected Maker FeatherS3[D]: length (X), width (Y), thickness
+// Unexpected Maker FeatherS3[D]: length (down the grip), width (across it), thickness
 fth = [52.3, 22.9, 1.6];
 fth_top_h = 5;        // tallest part above the PCB (battery JST, 6.6 mm overall)
 fth_bot_h = 1.5;      // parts and trimmed leads under the PCB
 fth_edge = 0.8;       // how much of each long edge the side rails hold
 usb_y = 0;            // centre of the USB-C port, across the board
-// Adafruit 326 0.96" OLED (STEMMA QT): width (Y, along the header), depth (X), PCB thickness
+// Adafruit 326 0.96" OLED (STEMMA QT): width (Y, along the header), height (up the rear face), PCB thickness
 oled_pcb = [29.2, 26.7, 1.6];
 oled_glass_t = 1.6;   // glass + tape above the PCB
 oled_bot_h = 3;       // STEMMA QT sockets under the PCB
-oled_win = [24, 13];  // visible window (Y, X), active area 21.7 x 10.9 plus margin
-oled_win_dx = -2;     // window centre offset from the module centre, toward the front (the active area sits toward the header)
+oled_win = [24, 13];  // visible window (across, up the face), active area 21.7 x 10.9 plus margin
+oled_win_ds = 2;      // window centre offset from the module centre, up the face (the active area sits toward the header, at the top)
 // Adafruit 5188 DS3231 clock: length (along the grip), width, thickness incl. coin cell and sockets
 rtc = [25.4, 17.8, 8];
 rtc_plug = 6;         // room past each end for a STEMMA QT plug
@@ -62,6 +63,10 @@ sw_hole_d = 2.3;
 sw_hole_pitch = 9.5;
 sw_hole_h = 2.9;              // hole centres from the terminal edge
 sw_lever = 5;                 // trigger-to-body gap at rest; the roller lever is preloaded inside it
+// 6 mm tactile button (Adafruit 367), the menu button: body square, body height,
+// stem diameter and height above the body. Its legs come out of two opposite sides.
+btn = [6.2, 3.5];
+btn_stem = [3.5, 1.5];
 // M3 screws into heat-set inserts
 screw_d = 3.4;
 screw_head_d = 6.2;
@@ -71,8 +76,10 @@ insert_depth = 8;
 boss_d = 7.5;
 
 /* [Layout] */
-head_l = 82;
-head_h = 40;
+head_l = 58;          // front face, from the grip's rear edge at the top
+head_h = 49;
+rear_x = -3;          // bottom of the rear face: it overhangs the grip a little, so your hand's web stops under it
+rear_tilt = 16;       // rear face leans forward at the top, so the screen faces up toward you while you aim down
 grip_x0 = 4;          // rear edge of the grip where it meets the head
 grip_d = 47;          // grip front-to-back (deep enough for edge_r around the battery)
 grip_l = 88;          // grip length below the head: four fingers of a medium to large hand
@@ -81,10 +88,9 @@ swell = 3;            // palm swell: how far the backstrap bulges...
 swell_v = [12, 80];   // ...between these points down the grip
 flare = [3, 2];       // butt flare, rear and front
 flare_l = 16;         // flare length up the grip
-sens_z = 14;          // sensor axis height
-laser_z = 31;         // aiming dot height at the front face
+sens_z = 15;          // sensor axis height
+laser_z = 39;         // aiming dot height at the front face
 aim_dist = 250;       // laser crosses the sensor axis this far out
-fth_z = 12;           // underside of the Feather PCB
 // Trigger: a wide paddle filling an opening at the top of the grip's front,
 // hinged at its top inside the grip (like a handheld IR thermometer's).
 trig_pivot = [grip_d - 7, -7]; // hinge, grip-local [u, v], just under the head
@@ -95,10 +101,15 @@ trig_proud = [3, 7];  // how far the face stands proud of the grip, top and bott
 trig_t = 18;          // paddle width (Y), within the grip's flat front; clears the battery
 trig_travel = 2.5;    // swing at the bottom of the back face, up to the stop
 nut_af = 5.5;         // M3 nut across flats, for the hinge screw
-buzzer_xz = [12, 27];
-oled_x = 28.5;        // rear edge of the OLED module (header end)
-rtc_v = 30;           // clock board top edge, along the grip
+buzzer_xz = [28, 20];
+oled_s = 20;          // bottom edge of the OLED module, up the rear face
+rtc_v = 34;           // clock board top edge, along the grip
 bat_v = 2.5;          // battery top edge, along the grip; it sits beside the switch
+// Menu button: on the rear face below the screen, where the thumb reaches over.
+btn_s = 12.5;         // centre, up the rear face
+btn_cap_d = 7;        // printed cap: plunger through the rear wall...
+btn_cap_proud = 1.5;  // ...standing this far out of it...
+btn_flange = [10, 1.2]; // ...and a flange inside that keeps it in (diameter, thickness)
 usb_cover_fit = 0.15; // per side; raise for a looser cover
 
 $fa = 4;
@@ -108,9 +119,8 @@ $fs = 0.4;
 
 W = oled_pcb[0] + 2 * clear + 2 * wall;       // overall width, set by the OLED
 Wi = W / 2 - wall;                            // inner half-width
-oled_z = head_h - wall - oled_glass_t - oled_pcb[2]; // underside of the OLED PCB
-oled_win_x = oled_x + oled_pcb[1] / 2 + oled_win_dx;
-fth_port_z = fth_z + fth[2] + usb_c[2] / 2;
+oled_win_s = oled_s + oled_pcb[1] / 2 + oled_win_ds;
+oled_k = wall + oled_glass_t;                 // front of the OLED PCB, in from the rear face
 front_in = grip_d - wall;                     // inner face of the grip's front wall (u)
 trig_inner_bot = trig_bot + 2.3;              // bottom of the paddle's inside part; the shoulder below the opening is the rest stop
 trig_angle = atan(trig_travel / (trig_inner_bot - trig_pivot[1]));
@@ -119,16 +129,33 @@ stop_u = trig_back - trig_travel;             // full-pull stop face (u)
 sw_v = 1.5;                                   // switch body top edge (v)
 pivot_xz = gp(trig_pivot[0], trig_pivot[1]);
 mlx_x = head_l - 1 - mlx_can_h - car[2];      // back of the carrier; lens face 1 mm behind the front
-fth_x = wall + 1.8;                           // USB end of the Feather
+// The Feather stands in the grip, between the battery (left) and the clock (right),
+// components toward the clock, USB-C down through the butt.
+usb_open = [12.5, 7];                         // opening in the butt for a plug overmold (across the grip, Y)
+usb_yc = -usb_open[1] / 2;                    // opening runs from the split into the left half
+fth_v1 = grip_l - wall - 1.8;                 // USB end of the board (v)
+fth_v0 = fth_v1 - fth[0];
+fth_u = (grip_d - fth[1]) / 2;                // rear long edge (u)
+fth_yb = usb_yc - usb_c[2] / 2 - fth[2];      // underside of the PCB (y)
 laser_tilt = atan((laser_z - sens_z) / aim_dist);
 laser_block = [laser_l + 2, 12];              // length, height
 rtc_u = (grip_d - rtc[1]) / 2;                // clock board rear edge (u)
+btn_tip_x = wall + btn_flange[1] + 0.3;       // stem tip, 0.3 behind the cap's flange
+btn_body_x = btn_tip_x + btn_stem[1];         // front of the button body
+btn_back_x = btn_body_x + btn[1];             // back of the body, against the backstop
+btn_hold = [btn_back_x + clear + 2 - wall, btn_flange[0] / 2 + clear + 1.2]; // holder: depth (X), half-height (Z)
+
+head_pts = [[rear_x, 0], [head_l, 0], [head_l, head_h], [rear_x + head_h * tan(rear_tilt), head_h]];
+
+// Rear-face-local: children use x = depth in from the rear face, z = distance up it.
+module in_rear() translate([rear_x, 0, 0]) rotate([0, rear_tilt, 0]) children();
+function rp(k, s) = [rear_x + k * cos(rear_tilt) + s * sin(rear_tilt), -k * sin(rear_tilt) + s * cos(rear_tilt)];
 
 // Grip-local (u across the grip rear to front, v down the grip) to model [x, z].
 function gp(u, v) = [grip_x0 + u * cos(grip_angle) - v * sin(grip_angle),
                      -u * sin(grip_angle) - v * cos(grip_angle)];
 
-boss_xz = [[58.5, 7.8], [59.5, 32], [24, 31], gp(10, -3), gp(grip_d / 2, grip_l - 13)];
+boss_xz = [[47, 28], [24, 40.5], gp(10, -3), gp(8, grip_l - 9), gp(grip_d - 8, grip_l - 9)];
 
 // Children use grip-local coordinates: x = u, z = -v.
 module in_grip() translate([grip_x0, 0, 0]) rotate([0, grip_angle, 0]) children();
@@ -146,7 +173,7 @@ module profile() {
     offset(r = corner_r) offset(delta = -corner_r)
     offset(r = -fillet_r) offset(delta = fillet_r)
     union() {
-        square([head_l, head_h]);
+        polygon(head_pts);
         translate([grip_x0, 0]) rotate(-grip_angle) grip_2d();
     }
 }
@@ -213,10 +240,9 @@ module cavity() {
 
 module rounded_rect(size, r) offset(r = r) square([size[0] - 2 * r, size[1] - 2 * r], center = true);
 
-// Opening in the rear wall for the Feather's USB-C, sized for a plug overmold (Y, Z).
-usb_open = [12.5, 7];
-module usb_opening(grow = 0, depth = wall + 2) translate([-1, usb_y, fth_port_z]) rotate([0, 90, 0])
-    linear_extrude(depth) rotate(90) rounded_rect(usb_open + [2 * grow, 2 * grow], 1.5 + grow);
+// Opening in the butt for the Feather's USB-C.
+module usb_opening() in_grip() translate([grip_d / 2 + usb_y, usb_yc, -grip_l - 1])
+    linear_extrude(wall + 2) rounded_rect(usb_open, 1.5);
 
 // Side rails that hold a board's two edges, from the board's edge out to the
 // side wall; pcb_slots() cuts the groove for the board into them.
@@ -231,7 +257,20 @@ module pcb_slots(at, size, grip = 1) for (s = [-1, 1])
 
 car_at = [mlx_x, sens_z - car[1] / 2];
 car_size = [car[2], car[0], car[1]];
-fth_at = [fth_x, fth_z];
+
+// Feather rails in the grip, below the battery: from the left wall to the board's two
+// long edges, holding fth_edge of each; fth_slots() cuts the groove.
+fth_rail_v = bat_v + bat[1] + 2 * clear + 1.2 + 0.5;
+module fth_rails() in_grip() for (e = [0, 1])
+    translate([e ? fth_u + fth[1] - fth_edge : fth_u - 2.5, -Wi - 0.01, -fth_v1 - 0.5])
+        cube([2.5 + fth_edge, fth_yb + fth[2] + 1.2 + Wi + 0.01, fth_v1 + 0.5 - fth_rail_v]);
+module fth_slots() in_grip() for (e = [0, 1])
+    translate([e ? fth_u + fth[1] - fth_edge - 0.01 : fth_u - clear, fth_yb - clear, -fth_v1 - 0.5 - 0.01])
+        cube([fth_edge + clear + 0.01, fth[2] + 2 * clear, fth_v1 + 0.5 - fth_rail_v + 0.02]);
+// Stops at the board's top end, from the right half across the split, so a USB
+// plug can't push the board up the grip.
+module fth_stops() in_grip() for (u = [fth_u - 1, fth_u + fth[1] - 2])
+    translate([u, fth_yb - 0.5, -(fth_v0 - clear)]) cube([3, Wi - fth_yb + 0.5 + 0.01, 3]);
 
 // ---- inside -------------------------------------------------------------
 
@@ -243,7 +282,7 @@ module features() {
     for (p = boss_xz) at_xz(p) along_y(boss_d, -Wi - 0.01, Wi + 0.01);
     // Rails for the sensor carrier and the Feather.
     pcb_rails(car_at, car_size);
-    pcb_rails(fth_at, fth, fth_edge);
+    fth_rails();
     // Hinge pads: room for the nut pocket and screw head, and side guides for the trigger.
     at_xz(pivot_xz) for (s = [-1, 1])
         along_y(9, s > 0 ? trig_t / 2 + 0.5 : -Wi - 0.01, s > 0 ? Wi + 0.01 : -trig_t / 2 - 0.5);
@@ -271,6 +310,34 @@ module sw_pins() in_grip() for (dv = [0, sw_hole_pitch])
     translate([sw_top - sw[1] + sw_hole_h, 0, -(sw_v + (sw[0] - sw_hole_pitch) / 2 + dv)])
         along_y(sw_hole_d - 0.3, -sw[2] / 2 - 0.3, sw[2] / 2 + 0.3);
 
+// Menu button holder, on the left half: a block on the rear wall, rising from the
+// left wall past the split, with a slot open toward the right half. The button
+// drops in from that side, legs up and down, against a backstop bar; the cap's
+// flange sits in front of it.
+module btn_holder() intersection() { body(); in_rear() translate([0, 0, btn_s - btn_hold[1]]) {
+    translate([wall - 0.01, -Wi - 0.01, 0]) cube([btn_hold[0] + 0.01, Wi + 0.02, 2 * btn_hold[1]]);
+    // Past the split it only touches the right half's wall.
+    translate([wall + 0.02, 0, 0]) cube([btn_hold[0] - 0.02, btn[0] / 2 + clear + 1.6, 2 * btn_hold[1]]);
+} }
+
+module btn_slot() {
+    up = 20; // open toward +Y
+    module slot(x0, x1, h, w) translate([x0, -w / 2, btn_s - h / 2]) cube([x1 - x0, w / 2 + up, h]);
+    in_rear() {
+    // Flange, with room for the cap's travel.
+    translate([wall - 0.01, 0, btn_s]) hull() for (y = [0, up]) translate([0, y, 0])
+        along_x(btn_flange[0] + 2 * clear, 0, btn_tip_x + 0.5 - wall + 0.01);
+    // Stem.
+    translate([btn_tip_x, 0, btn_s]) hull() for (y = [0, up]) translate([0, y, 0])
+        along_x(btn_stem[0] + 1, 0, btn_body_x - btn_tip_x + 0.01);
+    // Body, with room for the legs above and below it.
+    slot(btn_body_x, btn_back_x + clear, btn[0] + 2, btn[0] + 2 * clear);
+    // Legs past the backstop bar.
+    for (s = [-1, 1]) translate([0, 0, s * 3.9])
+        slot(btn_back_x, wall + btn_hold[0] + 1, 3, btn[0] + 2 * clear);
+    }
+}
+
 module cutouts() {
     // Sensor aperture: open, no window. Glass and clear plastic block thermal IR.
     translate([0, 0, sens_z]) {
@@ -279,19 +346,23 @@ module cutouts() {
             cylinder(d1 = mlx_can_d + 0.8, d2 = mlx_can_d + 3, h = 1);
     }
     pcb_slots(car_at, car_size);
-    pcb_slots(fth_at, fth, fth_edge);
+    fth_slots();
     // Laser bore, tilted so the dot lands on the sensor axis at aim_dist.
     translate([head_l, 0, laser_z]) rotate([0, laser_tilt, 0])
         along_x(laser_d + 0.3, -laser_block[0] - 1, 2);
     // Feather USB-C (charging, flashing, serial console), closed by the usb_cover part.
     usb_opening();
-    // OLED: pocket, PCB slots in the side walls, and a window bevelled fore and aft.
-    translate([oled_x - clear, -W / 2 + wall, oled_z - 1]) cube([oled_pcb[1] + 2 * clear, W - 2 * wall, head_h - wall - oled_z + 1]);
-    for (s = [-1, 1]) translate([oled_x - clear, s > 0 ? W / 2 - wall - 0.01 : -W / 2 + wall - 0.9, oled_z - 0.2])
-        cube([oled_pcb[1] + 2 * clear, 0.91, oled_pcb[2] + 0.4]);
-    translate([oled_win_x, 0, head_h - wall - 0.01]) hull() {
-        linear_extrude(0.01) square([oled_win[1], oled_win[0]], center = true);
-        translate([0, 0, wall + 0.02]) linear_extrude(0.01) square([oled_win[1] + 2 * wall, oled_win[0] + 2], center = true);
+    in_rear() {
+        // OLED: pocket, PCB slots in the side walls, and a window bevelled in and out.
+        translate([wall - 0.01, -Wi, oled_s - clear]) cube([oled_glass_t + oled_pcb[2] + oled_bot_h + 1, 2 * Wi, oled_pcb[1] + 2 * clear]);
+        for (s = [-1, 1]) translate([oled_k - 0.2, s > 0 ? Wi - 0.01 : -Wi - 0.9, oled_s - clear])
+            cube([oled_pcb[2] + 0.4, 0.91, oled_pcb[1] + 2 * clear]);
+        translate([wall + 0.01, 0, oled_win_s]) rotate([0, -90, 0]) hull() {
+            linear_extrude(0.01) square([oled_win[1], oled_win[0]], center = true);
+            translate([0, 0, wall + 0.02]) linear_extrude(0.01) square([oled_win[1] + 2 * wall, oled_win[0] + 2], center = true);
+        }
+        // Menu button cap bore.
+        translate([0, 0, btn_s]) along_x(btn_cap_d + 2 * clear, -1, wall + 0.01);
     }
     // Buzzer sound holes (right half).
     at_xz(buzzer_xz) for (p = [[0, 0], [3, 0], [-3, 0], [0, 3], [0, -3]])
@@ -306,8 +377,9 @@ module lip_keepouts() {
     translate([0, 0, sens_z]) along_x(mlx_can_d + 6, head_l - 10, head_l + 1);
     translate([mlx_x - 3, -6, -1]) cube([head_l - mlx_x + 4, 12, sens_z]);
     translate([head_l - laser_block[0] - 6, -5, laser_z - laser_block[1] / 2 - 2]) cube([laser_block[0] + 8, 10, 30]);
-    translate([-1, -13, fth_z - 4]) cube([wall + 4, 26, 18]);
-    translate([oled_x - 2, -5, oled_z - 4]) cube([oled_pcb[1] + 4, 10, 20]);
+    in_rear() translate([-1, -Wi, btn_s - btn_hold[1] - 1])
+        cube([wall + btn_hold[0] + 2, 2 * Wi, oled_s + oled_pcb[1] + 3 - (btn_s - btn_hold[1] - 1)]);
+    in_grip() translate([fth_u - 3, usb_yc - usb_open[1] / 2 - 2, -grip_l - 1]) cube([fth[1] + 6, usb_open[1] + 4, wall + 5]);
     in_grip() translate([sw_top - sw[1] - 2, -Wi, -(sw_v + sw[0] + 2)])
         cube([grip_d - sw_top + sw[1] + 3, 2 * Wi, sw_v + sw[0] + 2 - trig_top + 4]);
 }
@@ -369,9 +441,20 @@ module trigger_placed(f = pull) in_grip()
     translate([trig_pivot[0], 0, -trig_pivot[1]]) rotate([0, f * trig_angle, 0])
         translate([-trig_pivot[0], 0, trig_pivot[1]]) slab(-trig_t / 2, trig_t / 2) trigger_2d();
 
+// Menu button cap; prints flange down.
+module btn_cap() {
+    cylinder(d = btn_flange[0], h = btn_flange[1]);
+    cylinder(d = btn_cap_d, h = btn_flange[1] + wall + btn_cap_proud - 0.6);
+    translate([0, 0, btn_flange[1] + wall + btn_cap_proud - 0.6])
+        cylinder(d1 = btn_cap_d, d2 = btn_cap_d - 1.2, h = 0.6);
+}
+
+module btn_cap_in_place() color("dimgray") in_rear()
+    translate([wall + btn_flange[1], 0, btn_s]) rotate([0, -90, 0]) btn_cap();
+
 // Press-fit cover for the USB opening; prints flange down. Pull it by the tab.
 module usb_cover() {
-    flange = usb_open + [5, 5];
+    flange = usb_open + [5, 4];
     linear_extrude(1.2) rounded_rect(flange, 3);
     linear_extrude(1.2 + wall) rounded_rect(usb_open - 2 * [usb_cover_fit, usb_cover_fit], 1.5 - usb_cover_fit);
     translate([flange[0] / 2 - 1, -3, 0]) cube([5, 6, 1.2]);
@@ -379,7 +462,8 @@ module usb_cover() {
 
 module left() {
     difference() {
-        union() { intersection() { shell(); half_space(-1); } lip(); }
+        union() { intersection() { shell(); half_space(-1); } lip(); btn_holder(); }
+        btn_slot();
         for (p = concat(boss_xz, [pivot_xz])) at_xz(p) {
             along_y(screw_d, -W / 2 - 1, 0.1);
             along_y(screw_head_d, -W / 2 - 1, -W / 2 + screw_head_h);
@@ -394,7 +478,7 @@ module left() {
 
 module right() {
     difference() {
-        union() { intersection() { shell(); half_space(1); } sw_pins(); }
+        union() { intersection() { shell(); half_space(1); } sw_pins(); fth_stops(); }
         for (p = boss_xz) at_xz(p) along_y(insert_d, -0.1, insert_depth);
         // Hinge screw through the right wall, nut recessed in its outer face.
         at_xz(pivot_xz) {
@@ -409,8 +493,8 @@ module right() {
 
 // ---- stand-in parts (for the assembly view and the fit check) -----------
 
-module usb_cover_in_place() color("dimgray")
-    translate([-1.2, usb_y, fth_port_z]) rotate([0, 90, 0]) rotate(90) usb_cover();
+module usb_cover_in_place() color("dimgray") in_grip()
+    translate([grip_d / 2 + usb_y, usb_yc, -grip_l - 1.2]) usb_cover();
 
 module parts() {
     // MLX90640 on its carrier, with room behind for the capacitors and cable.
@@ -419,23 +503,23 @@ module parts() {
         translate([0, 0, sens_z]) along_x(mlx_can_d, mlx_x + car[2], mlx_x + car[2] + mlx_can_h);
         translate([mlx_x - car_back, -car[0] / 2 + 2, sens_z - car[1] / 2 + 2]) cube([car_back, car[0] - 4, car[1] - 4]);
     }
-    // FeatherS3[D]: PCB, parts above and below, USB-C receptacle.
-    color("seagreen") {
-        translate([fth_x, -fth[1] / 2, fth_z]) cube(fth);
-        translate([fth_x + 2, -fth[1] / 2 + 2.5, fth_z + fth[2]]) cube([fth[0] - 4, fth[1] - 5, fth_top_h]);
-        translate([fth_x + 2, -fth[1] / 2 + 2.5, fth_z - fth_bot_h]) cube([fth[0] - 4, fth[1] - 5, fth_bot_h]);
-        translate([fth_x - 0.6, usb_y - usb_c[0] / 2, fth_z + fth[2]]) cube([usb_c[1], usb_c[0], usb_c[2]]);
+    // FeatherS3[D] in the grip: PCB, parts on both sides, USB-C receptacle at the butt end.
+    color("seagreen") in_grip() {
+        translate([fth_u, fth_yb, -fth_v1]) cube([fth[1], fth[2], fth[0]]);
+        translate([fth_u + 2.5, fth_yb + fth[2], -fth_v1 + 2]) cube([fth[1] - 5, fth_top_h, fth[0] - 4]);
+        translate([fth_u + 2.5, fth_yb - fth_bot_h, -fth_v1 + 2]) cube([fth[1] - 5, fth_bot_h, fth[0] - 4]);
+        translate([grip_d / 2 + usb_y - usb_c[0] / 2, fth_yb + fth[2], -fth_v1 - 0.6]) cube([usb_c[0], usb_c[2], usb_c[1]]);
     }
     // Laser module.
     color("crimson") translate([head_l, 0, laser_z]) rotate([0, laser_tilt, 0])
         along_x(laser_d, -laser_l - 0.8, -0.8);
     // Buzzer.
     color("dimgray") at_xz(buzzer_xz) along_y(buzzer_d, Wi - buzzer_h, Wi);
-    // OLED module: PCB, glass, sockets underneath.
-    color("black") {
-        translate([oled_x, -oled_pcb[0] / 2, oled_z]) cube([oled_pcb[1], oled_pcb[0], oled_pcb[2]]);
-        translate([oled_x + oled_pcb[1] / 2 - 9.5, -26.6 / 2, oled_z + oled_pcb[2]]) cube([19, 26.6, oled_glass_t]);
-        translate([oled_x + 2, -oled_pcb[0] / 2, oled_z - oled_bot_h]) cube([oled_pcb[1] - 4, oled_pcb[0], oled_bot_h]);
+    // OLED module on the rear face: glass, PCB, sockets behind.
+    color("black") in_rear() {
+        translate([oled_k, -oled_pcb[0] / 2, oled_s]) cube([oled_pcb[2], oled_pcb[0], oled_pcb[1]]);
+        translate([wall, -26.6 / 2, oled_s + oled_pcb[1] / 2 - 9.5]) cube([oled_glass_t, 26.6, 19]);
+        translate([oled_k + oled_pcb[2], -oled_pcb[0] / 2, oled_s + 2]) cube([oled_bot_h, oled_pcb[0], oled_pcb[1] - 4]);
     }
     in_grip() {
         // Microswitch body (its lever sits in the gap to the trigger).
@@ -454,6 +538,13 @@ module parts() {
         color("gold") translate([(grip_d - bat[0]) / 2, -Wi + 0.3, -bat_v - clear - bat[1]])
             cube([bat[0], bat[2], bat[1]]);
     }
+    // Menu button: body, stem, and its four legs bent straight back.
+    color("white") in_rear() {
+        translate([btn_body_x, -btn[0] / 2, btn_s - btn[0] / 2]) cube([btn[1], btn[0], btn[0]]);
+        translate([0, 0, btn_s]) along_x(btn_stem[0], btn_tip_x, btn_body_x);
+        for (s = [-1, 1], t = [-1, 1]) translate([btn_body_x + 1, t * 2.25 - 0.35, btn_s + s * 3.25 - 0.35])
+            cube([btn[1] + 2.5, 0.7, 0.7]);
+    }
 }
 
 // ---- output -------------------------------------------------------------
@@ -463,18 +554,22 @@ if (part == "left") translate([0, 0, W / 2]) rotate([90, 0, 0]) left();
 else if (part == "right") translate([0, 0, W / 2]) rotate([-90, 0, 0]) right();
 else if (part == "usb_cover") usb_cover();
 else if (part == "trigger") linear_extrude(trig_t) trigger_2d();
+else if (part == "btn_cap") btn_cap();
 else if (part == "cutaway") {
     color("lightgray") render() left();
     parts();
     color("orange") trigger_placed();
     usb_cover_in_place();
+    btn_cap_in_place();
 }
 else if (part == "check") {
     // Renders empty when every part clears the shell and the halves don't overlap.
     intersection() { union() { left(); right(); } parts(); }
     intersection() { left(); sw_pins(); }
+    intersection() { left(); fth_stops(); }
     for (f = [0, 1]) intersection() { union() { left(); right(); parts(); } trigger_placed(f); }
     intersection() { left(); right(); }
+    intersection() { union() { left(); right(); parts(); } btn_cap_in_place(); }
 }
 else {
     // Closed and opaque; see "cutaway" for the inside. (Transparent shells
@@ -483,4 +578,5 @@ else {
     color("silver") render() right();
     color("dimgray") trigger_placed();
     usb_cover_in_place();
+    btn_cap_in_place();
 }
