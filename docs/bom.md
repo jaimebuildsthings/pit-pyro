@@ -15,7 +15,7 @@ About $80. Enough to read frames and zones on the serial console.
 | Perfboard, ~20 × 20 mm | 1 | $3 | Sensor carrier: sensor, two capacitors, cable |
 | Through-hole capacitor kit (SparkFun) | 1 | $12 | 100 nF (ceramic, X7R if possible) + 10 µF for the sensor supply. The 10 µF is likely electrolytic: stripe = GND |
 | STEMMA QT / Qwiic cable (JST-SH 1.0 mm, 4-pin) to **male headers**, 150 mm (Adafruit 4209) | 1 | $1 | Sensor carrier to the Feather |
-| STEMMA QT / Qwiic cable, plug both ends, **100 mm** (Adafruit 4210) | 2 | $2 | Feather to the clock; a second one cut in half and soldered to the screen (its plug points sideways, with no room in the head) |
+| STEMMA QT / Qwiic cable, plug both ends, **100 mm** (Adafruit 4210) | 2 | $2 | Feather to the clock; a second one with one plug cut off, soldered to the screen (its plug points sideways, with no room in the head) |
 | Resistors, 2.2–10 kΩ | 2 | on hand | I²C pull-ups, only if nothing else on the bus has them (the OLED and clock boards usually do) |
 
 ## Phase 2: handheld
