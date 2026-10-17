@@ -29,6 +29,7 @@ About $70 more, plus the mechanical parts below.
 | Coin cell, **CR1220** | 1 | $2 | For the Adafruit clock (not CR2032) |
 | 0.96″ OLED, 128×64, SSD1306, white, STEMMA QT (Adafruit 326) | 1 | $18 | Monochrome: best contrast in daylight. Defaults to I²C |
 | Microswitch with roller lever (Adafruit 819, KW11-3Z size) | 1 | $2 | Trigger switch, ~20 × 10 × 6.4 mm body; wire C and NO |
+| Tactile button, 6 mm (Adafruit 367, 20 pack) | 1 | $3 | Menu button. Through-hole, 4 legs; any standard 6 × 6 mm tactile button fits |
 | Laser diode, 5 mW 650 nm red, dot (Adafruit 1054) | 1 | $6 | Not the "line" version. Dim with PWM |
 | Piezo buzzer PS1240 (Adafruit 160) | 1 | $2 | Passive; the firmware drives the tone |
 | NPN transistor PN2222 (Adafruit 756, 10 pack) + 1 kΩ base resistor | 2 | $2 | Buzzer and laser drivers |

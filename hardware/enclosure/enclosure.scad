@@ -8,13 +8,14 @@
 //          openscad --export-format binstl -D 'part="right"'     -o stl/enclosure-right.stl     enclosure.scad
 //          openscad --export-format binstl -D 'part="usb_cover"' -o stl/usb-cover.stl           enclosure.scad
 //          openscad --export-format binstl -D 'part="trigger"'   -o stl/trigger.stl             enclosure.scad
+//          openscad --export-format binstl -D 'part="btn_cap"'   -o stl/button-cap.stl          enclosure.scad
 // Parts:   assembly (closed shell), cutaway (left half + stand-in parts),
-//          left, right, usb_cover, trigger (each laid flat, ready to slice), check
+//          left, right, usb_cover, trigger, btn_cap (each laid flat, ready to slice), check
 //          (renders nothing but contact faces when every part fits).
 //
 // Licensed under CERN-OHL-P-2.0, see ../LICENSE.
 
-part = "assembly"; // [assembly, cutaway, left, right, usb_cover, trigger, check]
+part = "assembly"; // [assembly, cutaway, left, right, usb_cover, trigger, btn_cap, check]
 pull = 0;          // [0:0.1:1] trigger position in the views: 0 at rest, 1 fully pulled
 
 /* [Shell] */
@@ -62,6 +63,10 @@ sw_hole_d = 2.3;
 sw_hole_pitch = 9.5;
 sw_hole_h = 2.9;              // hole centres from the terminal edge
 sw_lever = 5;                 // trigger-to-body gap at rest; the roller lever is preloaded inside it
+// 6 mm tactile button (Adafruit 367), the menu button: body square, body height,
+// stem diameter and height above the body. Its legs come out of two opposite sides.
+btn = [6.2, 3.5];
+btn_stem = [3.5, 1.5];
 // M3 screws into heat-set inserts
 screw_d = 3.4;
 screw_head_d = 6.2;
@@ -99,6 +104,11 @@ buzzer_xz = [12, 27];
 oled_x = 28.5;        // rear edge of the OLED module (header end)
 rtc_v = 30;           // clock board top edge, along the grip
 bat_v = 2.5;          // battery top edge, along the grip; it sits beside the switch
+// Menu button: on the rear face, above the USB port, where the thumb reaches over.
+btn_z = 28;           // centre height
+btn_cap_d = 7;        // printed cap: plunger through the rear wall...
+btn_cap_proud = 1.5;  // ...standing this far out of it...
+btn_flange = [10, 1.2]; // ...and a flange inside that keeps it in (diameter, thickness)
 usb_cover_fit = 0.15; // per side; raise for a looser cover
 
 $fa = 4;
@@ -123,6 +133,10 @@ fth_x = wall + 1.8;                           // USB end of the Feather
 laser_tilt = atan((laser_z - sens_z) / aim_dist);
 laser_block = [laser_l + 2, 12];              // length, height
 rtc_u = (grip_d - rtc[1]) / 2;                // clock board rear edge (u)
+btn_tip_x = wall + btn_flange[1] + 0.3;       // stem tip, 0.3 behind the cap's flange
+btn_body_x = btn_tip_x + btn_stem[1];         // front of the button body
+btn_back_x = btn_body_x + btn[1];             // back of the body, against the backstop
+btn_hold = [btn_back_x + clear + 2 - wall, btn_flange[0] / 2 + clear + 1.2]; // holder: depth (X), half-height (Z)
 
 // Grip-local (u across the grip rear to front, v down the grip) to model [x, z].
 function gp(u, v) = [grip_x0 + u * cos(grip_angle) - v * sin(grip_angle),
@@ -271,6 +285,32 @@ module sw_pins() in_grip() for (dv = [0, sw_hole_pitch])
     translate([sw_top - sw[1] + sw_hole_h, 0, -(sw_v + (sw[0] - sw_hole_pitch) / 2 + dv)])
         along_y(sw_hole_d - 0.3, -sw[2] / 2 - 0.3, sw[2] / 2 + 0.3);
 
+// Menu button holder, on the left half: a block on the rear wall, rising from the
+// left wall past the split, with a slot open toward the right half. The button
+// drops in from that side, legs up and down, against a backstop bar; the cap's
+// flange sits in front of it.
+module btn_holder() translate([0, 0, btn_z - btn_hold[1]]) {
+    translate([wall - 0.01, -Wi - 0.01, 0]) cube([btn_hold[0] + 0.01, Wi + 0.02, 2 * btn_hold[1]]);
+    // Past the split it only touches the right half's wall.
+    translate([wall + 0.02, 0, 0]) cube([btn_hold[0] - 0.02, btn[0] / 2 + clear + 1.6, 2 * btn_hold[1]]);
+}
+
+module btn_slot() {
+    up = 20; // open toward +Y
+    module slot(x0, x1, h, w) translate([x0, -w / 2, btn_z - h / 2]) cube([x1 - x0, w / 2 + up, h]);
+    // Flange, with room for the cap's travel.
+    translate([wall - 0.01, 0, btn_z]) hull() for (y = [0, up]) translate([0, y, 0])
+        along_x(btn_flange[0] + 2 * clear, 0, btn_tip_x + 0.5 - wall + 0.01);
+    // Stem.
+    translate([btn_tip_x, 0, btn_z]) hull() for (y = [0, up]) translate([0, y, 0])
+        along_x(btn_stem[0] + 1, 0, btn_body_x - btn_tip_x + 0.01);
+    // Body, with room for the legs above and below it.
+    slot(btn_body_x, btn_back_x + clear, btn[0] + 2, btn[0] + 2 * clear);
+    // Legs past the backstop bar.
+    for (s = [-1, 1]) translate([0, 0, s * 3.9])
+        slot(btn_back_x, wall + btn_hold[0] + 1, 3, btn[0] + 2 * clear);
+}
+
 module cutouts() {
     // Sensor aperture: open, no window. Glass and clear plastic block thermal IR.
     translate([0, 0, sens_z]) {
@@ -293,6 +333,8 @@ module cutouts() {
         linear_extrude(0.01) square([oled_win[1], oled_win[0]], center = true);
         translate([0, 0, wall + 0.02]) linear_extrude(0.01) square([oled_win[1] + 2 * wall, oled_win[0] + 2], center = true);
     }
+    // Menu button cap bore.
+    translate([0, 0, btn_z]) along_x(btn_cap_d + 2 * clear, -1, wall + 0.01);
     // Buzzer sound holes (right half).
     at_xz(buzzer_xz) for (p = [[0, 0], [3, 0], [-3, 0], [0, 3], [0, -3]])
         translate([p[0], 0, p[1]]) along_y(1.6, Wi - 1, W / 2 + 1);
@@ -308,6 +350,7 @@ module lip_keepouts() {
     translate([head_l - laser_block[0] - 6, -5, laser_z - laser_block[1] / 2 - 2]) cube([laser_block[0] + 8, 10, 30]);
     translate([-1, -13, fth_z - 4]) cube([wall + 4, 26, 18]);
     translate([oled_x - 2, -5, oled_z - 4]) cube([oled_pcb[1] + 4, 10, 20]);
+    translate([-1, -Wi, btn_z - btn_hold[1] - 1]) cube([wall + btn_hold[0] + 2, 2 * Wi, 2 * btn_hold[1] + 2]);
     in_grip() translate([sw_top - sw[1] - 2, -Wi, -(sw_v + sw[0] + 2)])
         cube([grip_d - sw_top + sw[1] + 3, 2 * Wi, sw_v + sw[0] + 2 - trig_top + 4]);
 }
@@ -369,6 +412,17 @@ module trigger_placed(f = pull) in_grip()
     translate([trig_pivot[0], 0, -trig_pivot[1]]) rotate([0, f * trig_angle, 0])
         translate([-trig_pivot[0], 0, trig_pivot[1]]) slab(-trig_t / 2, trig_t / 2) trigger_2d();
 
+// Menu button cap; prints flange down.
+module btn_cap() {
+    cylinder(d = btn_flange[0], h = btn_flange[1]);
+    cylinder(d = btn_cap_d, h = btn_flange[1] + wall + btn_cap_proud - 0.6);
+    translate([0, 0, btn_flange[1] + wall + btn_cap_proud - 0.6])
+        cylinder(d1 = btn_cap_d, d2 = btn_cap_d - 1.2, h = 0.6);
+}
+
+module btn_cap_in_place() color("dimgray")
+    translate([wall + btn_flange[1], 0, btn_z]) rotate([0, -90, 0]) btn_cap();
+
 // Press-fit cover for the USB opening; prints flange down. Pull it by the tab.
 module usb_cover() {
     flange = usb_open + [5, 5];
@@ -379,7 +433,8 @@ module usb_cover() {
 
 module left() {
     difference() {
-        union() { intersection() { shell(); half_space(-1); } lip(); }
+        union() { intersection() { shell(); half_space(-1); } lip(); btn_holder(); }
+        btn_slot();
         for (p = concat(boss_xz, [pivot_xz])) at_xz(p) {
             along_y(screw_d, -W / 2 - 1, 0.1);
             along_y(screw_head_d, -W / 2 - 1, -W / 2 + screw_head_h);
@@ -454,6 +509,13 @@ module parts() {
         color("gold") translate([(grip_d - bat[0]) / 2, -Wi + 0.3, -bat_v - clear - bat[1]])
             cube([bat[0], bat[2], bat[1]]);
     }
+    // Menu button: body, stem, and its four legs bent straight back.
+    color("white") {
+        translate([btn_body_x, -btn[0] / 2, btn_z - btn[0] / 2]) cube([btn[1], btn[0], btn[0]]);
+        translate([0, 0, btn_z]) along_x(btn_stem[0], btn_tip_x, btn_body_x);
+        for (s = [-1, 1], t = [-1, 1]) translate([btn_body_x + 1, t * 2.25 - 0.35, btn_z + s * 3.25 - 0.35])
+            cube([btn[1] + 2.5, 0.7, 0.7]);
+    }
 }
 
 // ---- output -------------------------------------------------------------
@@ -463,11 +525,13 @@ if (part == "left") translate([0, 0, W / 2]) rotate([90, 0, 0]) left();
 else if (part == "right") translate([0, 0, W / 2]) rotate([-90, 0, 0]) right();
 else if (part == "usb_cover") usb_cover();
 else if (part == "trigger") linear_extrude(trig_t) trigger_2d();
+else if (part == "btn_cap") btn_cap();
 else if (part == "cutaway") {
     color("lightgray") render() left();
     parts();
     color("orange") trigger_placed();
     usb_cover_in_place();
+    btn_cap_in_place();
 }
 else if (part == "check") {
     // Renders empty when every part clears the shell and the halves don't overlap.
@@ -475,6 +539,7 @@ else if (part == "check") {
     intersection() { left(); sw_pins(); }
     for (f = [0, 1]) intersection() { union() { left(); right(); parts(); } trigger_placed(f); }
     intersection() { left(); right(); }
+    intersection() { union() { left(); right(); parts(); } btn_cap_in_place(); }
 }
 else {
     // Closed and opaque; see "cutaway" for the inside. (Transparent shells
@@ -483,4 +548,5 @@ else {
     color("silver") render() right();
     color("dimgray") trigger_placed();
     usb_cover_in_place();
+    btn_cap_in_place();
 }
