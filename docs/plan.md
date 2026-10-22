@@ -65,7 +65,7 @@ The full shopping list, with what to look for, is in [bom.md](bom.md).
 | **Screen: 0.96″ OLED, 128×64 (SSD1306, I²C)** | Next corner and last reading; high contrast for daylight at the track; shares the I²C bus with the sensor and clock | $5 |
 | **Clock module, DS3231** | Real timestamps on every run, kept on a coin cell while the device is off | $5 |
 | 1-cell LiPo, ~1000 mAh, JST-PH, with protection circuit | Cordless, lasts an event day; charged by the board | $8 |
-| Printed trigger + roller-lever microswitch (KW11-3Z size) | Pull = capture; also wakes the device from deep sleep. Hold = sleep. Selects in the menu | $1 |
+| Printed trigger + roller-lever microswitch (standard size) | Pull = capture; also wakes the device from deep sleep. Hold = sleep. Selects in the menu | $1 |
 | Menu button: 6 mm tactile button behind a printed cap, on the back of the head | Opens and steps through the menu; also wakes the device | $0.15 |
 | Aiming aid: small laser dot module or bright LED | Center the sensor on the tread | $3–5 |
 | Buzzer or vibration motor | "Captured" without looking | $2 |
