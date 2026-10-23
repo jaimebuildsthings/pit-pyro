@@ -75,13 +75,12 @@ The values below were measured with 0.05 mm vernier calipers on the parts for th
 | [`stl/trigger.stl`](stl/trigger.stl) | Trigger, printed on its side with the stop ear on top. If it rubs in its opening, sand its sides lightly |
 | [`stl/button-cap.stl`](stl/button-cap.stl) | Menu button cap, printed flange down |
 | [`stl/test-trigger.stl`](stl/test-trigger.stl) | **Test print first:** the right half's grip top (about 67 × 76 × 18 mm): hinge, switch posts, trigger stop. With the trigger and the switch on it, check that the switch clicks at full pull and doesn't bottom out |
-| [`stl/test-laser.stl`](stl/test-laser.stl) | **Test print first:** a 12 mm slice of the laser bore. The laser should slide in snugly |
 
 - The STLs are already oriented: flat outer face down, open side up. No supports, no brim needed.
 - PETG or ASA is best, since a car at an event sits in the sun and PLA softens around 55 °C. PLA is fine for a first fit check.
 - 0.2 mm layers, 3–4 perimeters, 20 % infill. Each half is about 78 × 145 mm.
 - The screw counterbores and the two nut pockets have two stepped bridging layers built in, so they print without support. Drill or cut them out if your slicer leaves a skin.
-- Print `test-trigger` and `test-laser` before the halves (about an hour). If the switch doesn't click at full pull, sand the stop post's face; if the lever bottoms out first, add tape to it. Then change `sw_pull` to match before printing the halves.
+- Print `test-trigger` and the trigger before the halves (under an hour). If the switch doesn't click at full pull, sand the stop post's face; if the lever bottoms out first, add tape to it. Then change `sw_pull` to match before printing the halves.
 - Print the trigger with 4 perimeters or 100 % infill: its stop ear takes the full squeeze across its layers.
 - The Feather stops (3 × 3 mm) on the right half stand 25 mm off the bed. Print them slowly, or bump the infill so they come out solid.
 - If the cover is too tight or too loose, change `usb_cover_fit` and reprint just the cover.
@@ -96,7 +95,7 @@ The values below were measured with 0.05 mm vernier calipers on the parts for th
 
 1. Press the heat-set inserts into the right half.
 2. Wire the switch's **COM** (the bent tab on the side opposite the lever; leave it as it is) and **NO** (the end tab nearer that side). Cut the NC end tab off and trim the NO tab to about 7 mm past the body with flush cutters, then solder the wires and cover the joints with heat-shrink. Put a nut in each pocket on the right half's outer face (the switch's sits deeper). Hold the microswitch on its posts in the right half (it overhangs the split by half a millimetre), terminals down and roller up toward the trigger. Screw the M3 × 14 in from outside through the post and the switch's hole near the terminals (it self-taps into the post), then clamp the switch with the M3 × 16 through its other hole into the nut. Plug both cables into the clock and bend each one sharply just past its plug, toward the middle of the grip (away from the wall); then stick the clock board to the right wall between its stops on foam tape, and the buzzer into its ring.
-3. Drop the button cap into its hole in the left half's rear wall from the inside, flange inward, then slide the menu button into its slot behind it, legs pointing up and down. A dab of glue keeps the button in its slot while you work. Push the laser into its bore (a dab of glue holds it). Cut the sensor carrier to 19.5–20 mm and file its edges so it slides into its rails. Slide the OLED sideways into the two corner slots on the left half, glass toward the window. Stick the battery to the left wall between its stops, then slide the Feather into its rails over it, parts up and USB-C into the opening in the butt.
+3. Drop the button cap into its hole in the left half's rear wall from the inside, flange inward, then slide the menu button into its slot behind it, legs pointing up and down. A dab of glue keeps the button in its slot while you work. Push the laser into its bore (a dab of glue holds it). The bore is split between the halves, so if it's tight, sand or scrape the grooves until it fits. Cut the sensor carrier to 19.5–20 mm and file its edges so it slides into its rails. Slide the OLED sideways into the two corner slots on the left half, glass toward the window. Stick the battery to the left wall between its stops, then slide the Feather into its rails over it, parts up and USB-C into the opening in the butt.
 4. Fit the trigger into its opening, holding the switch's lever back as it drops in, and wire everything (see [Wiring](#wiring)). Keep the I²C runs short.
 5. Close the halves (the lip on the left half locates the right) and screw them together. The M3 × 30 goes through the trigger's hinge, into the nut recessed in the right side.
 
@@ -104,7 +103,7 @@ The OLED's header ends up at the rear, so the image will be upside down unless t
 
 ## Changing the model
 
-Open `enclosure.scad` in OpenSCAD and press **F5** to preview. Use the `part` setting (or the Customizer panel) to switch between the `assembly`, `cutaway`, `left`, `right`, `usb_cover`, `trigger`, `btn_cap`, `test_trigger` and `test_laser` views; `pull` (0 to 1) swings the trigger. Then export:
+Open `enclosure.scad` in OpenSCAD and press **F5** to preview. Use the `part` setting (or the Customizer panel) to switch between the `assembly`, `cutaway`, `left`, `right`, `usb_cover`, `trigger`, `btn_cap` and `test_trigger` views; `pull` (0 to 1) swings the trigger. Then export:
 
 ```sh
 openscad --export-format binstl -D 'part="left"'      -o stl/enclosure-left.stl  enclosure.scad
@@ -113,7 +112,6 @@ openscad --export-format binstl -D 'part="usb_cover"' -o stl/usb-cover.stl      
 openscad --export-format binstl -D 'part="trigger"'   -o stl/trigger.stl         enclosure.scad
 openscad --export-format binstl -D 'part="btn_cap"'   -o stl/button-cap.stl      enclosure.scad
 openscad --export-format binstl -D 'part="test_trigger"' -o stl/test-trigger.stl enclosure.scad
-openscad --export-format binstl -D 'part="test_laser"'   -o stl/test-laser.stl   enclosure.scad
 ```
 
 `part="check"` is the fit check: it renders where the stand-in parts overlap the shell and where the two halves overlap each other. A clean design leaves only zero-thickness contact faces, such as boards resting in their slots. Run it after any layout change.

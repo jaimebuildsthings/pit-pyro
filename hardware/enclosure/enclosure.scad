@@ -10,15 +10,14 @@
 //          openscad --export-format binstl -D 'part="trigger"'   -o stl/trigger.stl             enclosure.scad
 //          openscad --export-format binstl -D 'part="btn_cap"'   -o stl/button-cap.stl          enclosure.scad
 //          openscad --export-format binstl -D 'part="test_trigger"' -o stl/test-trigger.stl   enclosure.scad
-//          openscad --export-format binstl -D 'part="test_laser"'   -o stl/test-laser.stl     enclosure.scad
 // Parts:   assembly (closed shell), cutaway (left half + stand-in parts),
 //          left, right, usb_cover, trigger, btn_cap (each laid flat, ready to slice), check
 //          (renders nothing but contact faces when every part fits);
-//          test_trigger, test_laser: small test prints of the riskiest fits.
+//          test_trigger: a small test print of the trigger and switch.
 //
 // Licensed under CERN-OHL-P-2.0, see ../LICENSE.
 
-part = "assembly"; // [assembly, cutaway, left, right, usb_cover, trigger, btn_cap, check, test_trigger, test_laser]
+part = "assembly"; // [assembly, cutaway, left, right, usb_cover, trigger, btn_cap, check, test_trigger]
 pull = 0;          // [0:0.1:1] trigger position in the views: 0 at rest, 1 fully pulled
 
 /* [Shell] */
@@ -651,14 +650,10 @@ else if (part == "right") translate([0, 0, W / 2]) rotate([-90, 0, 0]) right();
 else if (part == "usb_cover") usb_cover();
 else if (part == "trigger") translate([0, 0, trig_t / 2]) rotate([90, 0, 0]) trigger_3d(); // on its side, ear up
 else if (part == "btn_cap") btn_cap();
-// Test prints: the grip's top section of the right half (switch posts, trigger stop,
-// hinge), to try with the trigger and the switch; and a short laser bore.
+// Test print: the grip's top section of the right half (switch posts, trigger stop,
+// hinge), to try with the trigger and the switch.
 else if (part == "test_trigger") translate([0, 0, W / 2]) rotate([-90, 0, 0])
     intersection() { right(); in_grip() translate([-10, 0, -52]) cube([70, 30, 64]); }
-else if (part == "test_laser") difference() {
-    translate([-9, -9, 0]) cube([18, 18, 12]);
-    translate([0, 0, -1]) cylinder(d = laser_d + 0.6, h = 14);
-}
 else if (part == "cutaway") {
     color("lightgray") render() left();
     parts();
