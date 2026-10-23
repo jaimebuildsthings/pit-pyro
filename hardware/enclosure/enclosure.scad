@@ -6,18 +6,17 @@
 //
 // Export:  openscad --export-format binstl -D 'part="left"'      -o stl/enclosure-left.stl      enclosure.scad
 //          openscad --export-format binstl -D 'part="right"'     -o stl/enclosure-right.stl     enclosure.scad
-//          openscad --export-format binstl -D 'part="usb_cover"' -o stl/usb-cover.stl           enclosure.scad
 //          openscad --export-format binstl -D 'part="trigger"'   -o stl/trigger.stl             enclosure.scad
 //          openscad --export-format binstl -D 'part="btn_cap"'   -o stl/button-cap.stl          enclosure.scad
 //          openscad --export-format binstl -D 'part="test_trigger"' -o stl/test-trigger.stl   enclosure.scad
 // Parts:   assembly (closed shell), cutaway (left half + stand-in parts),
-//          left, right, usb_cover, trigger, btn_cap (each laid flat, ready to slice), check
+//          left, right, trigger, btn_cap (each laid flat, ready to slice), check
 //          (renders nothing but contact faces when every part fits);
 //          test_trigger: a small test print of the trigger and switch.
 //
 // Licensed under CERN-OHL-P-2.0, see ../LICENSE.
 
-part = "assembly"; // [assembly, cutaway, left, right, usb_cover, trigger, btn_cap, check, test_trigger]
+part = "assembly"; // [assembly, cutaway, left, right, trigger, btn_cap, check, test_trigger]
 pull = 0;          // [0:0.1:1] trigger position in the views: 0 at rest, 1 fully pulled
 
 /* [Shell] */
@@ -131,7 +130,6 @@ btn_s = 8.5;          // centre, up the rear face
 btn_cap_d = 7;        // printed cap: plunger through the rear wall...
 btn_cap_proud = 1.5;  // ...standing this far out of it...
 btn_flange = [10, 1.2]; // ...and a flange inside that keeps it in (diameter, thickness)
-usb_cover_fit = 0.15; // per side; raise for a looser cover
 
 $fa = 4;
 $fs = 0.4;
@@ -406,7 +404,7 @@ module cutouts() {
     // Laser bore, tilted so the dot lands on the sensor axis at aim_dist.
     translate([head_l, 0, laser_z]) rotate([0, laser_tilt, 0])
         along_x(laser_d + 0.6, -laser_block[0] - 1, 2); // printed holes come out small
-    // Feather USB-C (charging, flashing, serial console), closed by the usb_cover part.
+    // Feather USB-C (charging, flashing, serial console), left open.
     usb_opening();
     in_rear() {
         // OLED: pocket, and a window bevelled in and out.
@@ -520,14 +518,6 @@ module btn_cap() {
 module btn_cap_in_place() color("dimgray") in_rear()
     translate([wall + btn_flange[1], 0, btn_s]) rotate([0, -90, 0]) btn_cap();
 
-// Press-fit cover for the USB opening; prints flange down. Pull it by the tab.
-module usb_cover() {
-    flange = usb_open + [5, 4];
-    linear_extrude(1.2) rounded_rect(flange, 3);
-    linear_extrude(1.2 + wall) rounded_rect(usb_open - 2 * [usb_cover_fit, usb_cover_fit], 1.5 - usb_cover_fit);
-    translate([flange[0] / 2 - 1, -3, 0]) cube([5, 6, 1.2]);
-}
-
 module left() {
     difference() {
         union() { intersection() { shell(); half_space(-1); } lip(); btn_holder(); oled_slots(-1); }
@@ -565,9 +555,6 @@ module right() {
 }
 
 // ---- stand-in parts (for the assembly view and the fit check) -----------
-
-module usb_cover_in_place() color("dimgray") in_grip()
-    translate([grip_d / 2 + usb_y, usb_yc, -grip_l - 1.2]) usb_cover();
 
 module parts() {
     // MLX90640 on its carrier, with room behind for the capacitors and cable.
@@ -647,7 +634,6 @@ module sw_lever(f = pull) color("silver") in_grip() {
 // Halves come out lying on their flat outer faces, open side up.
 if (part == "left") translate([0, 0, W / 2]) rotate([90, 0, 0]) left();
 else if (part == "right") translate([0, 0, W / 2]) rotate([-90, 0, 0]) right();
-else if (part == "usb_cover") usb_cover();
 else if (part == "trigger") translate([0, 0, trig_t / 2]) rotate([90, 0, 0]) trigger_3d(); // on its side, ear up
 else if (part == "btn_cap") btn_cap();
 // Test print: the grip's top section of the right half (switch posts, trigger stop,
@@ -659,7 +645,6 @@ else if (part == "cutaway") {
     parts();
     sw_lever();
     color("orange") trigger_placed();
-    usb_cover_in_place();
     btn_cap_in_place();
 }
 else if (part == "check") {
@@ -677,7 +662,6 @@ else {
     color("lightgray") render() left();
     color("silver") render() right();
     color("dimgray") trigger_placed();
-    usb_cover_in_place();
     btn_cap_in_place();
     sw_lever();
 }
