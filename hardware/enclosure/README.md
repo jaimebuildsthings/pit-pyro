@@ -32,7 +32,7 @@ The sensor looks out through an **open aperture**: there's no window, because gl
 | Grip, centre right | The microswitch, upside down (terminals at the bottom, roller up at the trigger), beside the Feather's low top end (its end stops 1.6 mm short of the Feather's STEMMA QT sockets), its roller 4.5 mm right of centre. It sits on two posts off the right wall: an M3 × 16 screw and nut clamp it through one hole, and an M3 × 14 screwed in from outside is a steel locating pin through the other |
 | Grip, left wall | 1200 mAh LiPo, from just under the head down, between two stops |
 | Grip, middle | FeatherS3[D], standing on its edge with its parts facing the clock, between the battery and the clock. Below the battery, rails on the left half hold its long edges; two posts on the right half stop its top end, so a USB plug can't push it up the grip |
-| Grip, butt | The Feather's USB-C (charging, firmware, serial console) behind a press-fit cover. It's the only port |
+| Grip, butt | The Feather's USB-C (charging, firmware, serial console) left open, no cover. It's the only port |
 | Grip, right wall, low | DS3231 clock board lying across the grip, below the switch's wires, between four stops on its long edges, with room for a STEMMA QT plug at each end. It sits 0.7 mm off the wall on foam tape, so its corners clear the grip's rounded inside edges |
 
 ## Wiring
@@ -71,7 +71,6 @@ The values below were measured with 0.05 mm vernier calipers on the parts for th
 | --- | --- |
 | [`stl/enclosure-left.stl`](stl/enclosure-left.stl) | Counterbored screw holes, alignment lip, battery stops, Feather rails, menu button holder, OLED corner slots |
 | [`stl/enclosure-right.stl`](stl/enclosure-right.stl) | Heat-set insert holes, switch posts, trigger stop, Feather stops, buzzer ring, clock stops, OLED corner slots |
-| [`stl/usb-cover.stl`](stl/usb-cover.stl) | Press-fit cover for the USB opening |
 | [`stl/trigger.stl`](stl/trigger.stl) | Trigger, printed on its side with the stop ear on top. If it rubs in its opening, sand its sides lightly |
 | [`stl/button-cap.stl`](stl/button-cap.stl) | Menu button cap, printed flange down |
 | [`stl/test-trigger.stl`](stl/test-trigger.stl) | **Test print first:** the right half's grip top (about 67 × 76 × 18 mm): hinge, switch posts, trigger stop. With the trigger and the switch on it, check that the switch clicks at full pull and doesn't bottom out |
@@ -83,7 +82,6 @@ The values below were measured with 0.05 mm vernier calipers on the parts for th
 - Print `test-trigger` and the trigger before the halves (under an hour). If the switch doesn't click at full pull, sand the stop post's face; if the lever bottoms out first, add tape to it. Then change `sw_pull` to match before printing the halves.
 - Print the trigger with 4 perimeters or 100 % infill: its stop ear takes the full squeeze across its layers.
 - The Feather stops (3 × 3 mm) on the right half stand 25 mm off the bed. Print them slowly, or bump the infill so they come out solid.
-- If the cover is too tight or too loose, change `usb_cover_fit` and reprint just the cover.
 
 ## Hardware
 
@@ -103,12 +101,11 @@ The OLED's header ends up at the rear, so the image will be upside down unless t
 
 ## Changing the model
 
-Open `enclosure.scad` in OpenSCAD and press **F5** to preview. Use the `part` setting (or the Customizer panel) to switch between the `assembly`, `cutaway`, `left`, `right`, `usb_cover`, `trigger`, `btn_cap` and `test_trigger` views; `pull` (0 to 1) swings the trigger. Then export:
+Open `enclosure.scad` in OpenSCAD and press **F5** to preview. Use the `part` setting (or the Customizer panel) to switch between the `assembly`, `cutaway`, `left`, `right`, `trigger`, `btn_cap` and `test_trigger` views; `pull` (0 to 1) swings the trigger. Then export:
 
 ```sh
 openscad --export-format binstl -D 'part="left"'      -o stl/enclosure-left.stl  enclosure.scad
 openscad --export-format binstl -D 'part="right"'     -o stl/enclosure-right.stl enclosure.scad
-openscad --export-format binstl -D 'part="usb_cover"' -o stl/usb-cover.stl       enclosure.scad
 openscad --export-format binstl -D 'part="trigger"'   -o stl/trigger.stl         enclosure.scad
 openscad --export-format binstl -D 'part="btn_cap"'   -o stl/button-cap.stl      enclosure.scad
 openscad --export-format binstl -D 'part="test_trigger"' -o stl/test-trigger.stl enclosure.scad
