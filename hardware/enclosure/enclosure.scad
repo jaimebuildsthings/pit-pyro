@@ -34,7 +34,7 @@ lip_h = 1.5;
 // MLX90640ESF-BAA (bare TO39, SparkFun SEN-16429) on a perfboard carrier:
 // carrier width (Y), height (Z), thickness: a 20 mm square cut from a 2 x 8 cm strip.
 car = [20, 20, 1.6];
-car_back = 10;        // room behind the carrier for the capacitors, joints and cable
+car_back = 13;        // room behind the carrier for the joints, pull-ups, hot glue and cable (12 mm on the first one)
 mlx_can_d = 9.4;
 mlx_can_h = 11.4;     // lens face above the carrier: the can sits flush, its 6 mm legs leave nothing to raise it
 // Unexpected Maker FeatherS3[D]: length (down the grip), width (across it), thickness
