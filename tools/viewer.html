@@ -28,12 +28,13 @@
   .scale { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .scale span { white-space: nowrap; }
   canvas#bar { flex: 1; min-width: 0; width: 100%; height: 12px; border-radius: 3px; }
-  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+  .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: 12px; }
   .stat { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 8px; }
   .stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
   .stat span { font-size: 12px; color: var(--muted); }
   #status { font-size: 13px; color: var(--muted); margin-top: 10px; }
-  @media (max-width: 520px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 520px) { .stats { grid-template-columns: repeat(3, 1fr); } }
+  .stat.settling b { color: var(--accent); }
 </style>
 </head>
 <body>
@@ -56,6 +57,7 @@
     <div class="stat"><b id="sMin">–</b><span>min °C</span></div>
     <div class="stat"><b id="sMax">–</b><span>max °C</span></div>
     <div class="stat"><b id="sRate">–</b><span>images / s</span></div>
+    <div class="stat settling" id="runStat"><b id="sRun">–</b><span id="sRunLabel">running</span></div>
   </div>
   <div id="status">Not connected.</div>
 </main>
@@ -68,6 +70,18 @@ const store = {
 };
 let rotation = store.get('rotation', 0), mirror = store.get('mirror', false), smooth = store.get('smooth', true);
 let last = null, times = [];
+// Melexis: wait about 4 minutes after power-on before trusting absolute temperatures.
+const SETTLE_S = 4 * 60;
+let firstImageAt = null;
+function showRunTime() {
+  if (firstImageAt === null) return;
+  const s = Math.floor((performance.now() - firstImageAt) / 1000);
+  $('sRun').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+  const settled = s >= SETTLE_S;
+  $('runStat').classList.toggle('settling', !settled);
+  $('sRunLabel').textContent = settled ? 'running, settled' : 'running, settling';
+}
+setInterval(showRunTime, 1000);
 
 // Black, purple, magenta, orange, yellow, white: an "iron" palette.
 const STOPS = [[0, [0, 0, 0]], [0.2, [40, 0, 120]], [0.45, [180, 0, 140]], [0.7, [240, 90, 0]], [0.9, [255, 210, 0]], [1, [255, 255, 230]]];
@@ -87,6 +101,7 @@ function colour(t) {
 
 function draw(t) {
   last = t;
+  if (firstImageAt === null) { firstImageAt = performance.now(); showRunTime(); }
   let lo = Math.min(...t), hi = Math.max(...t);
   const mean = (a) => a.reduce((s, v) => s + v, 0) / a.length;
   const centre = mean([t[11 * W + 15], t[11 * W + 16], t[12 * W + 15], t[12 * W + 16]]);

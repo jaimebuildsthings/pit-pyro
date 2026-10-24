@@ -68,6 +68,6 @@ The sensor measures half its pixels at a time, in two chessboard *subpages*; a f
 
 `dump` output is what the test in `crates/mlx90640/tests/` uses: to check the maths against another sensor, save a dump to `tests/data/` and run Melexis's C driver on it the same way.
 
-## Known issue
+## Stripes in the image
 
-On the first desk-test sensor, every fourth column reads 0.7–1.2 °C high on an even surface. It's in the sensor's raw data (Melexis's maths shows it too) and it doesn't depend on the refresh rate. Averaging a tire zone over 10 columns cancels it out. It may come from the sensor's can warming unevenly, for example when it's held by the can.
+If every fourth column reads high on an even surface, it's in the sensor's raw data, not the maths: on the desk test it came from a sensor wired without its supply capacitors (and held by the can). With a 100 nF and a 10 µF across VDD and GND at the sensor, the stripes went from +0.7–1.2 °C to within ±0.1 °C. See [docs/desk-test.md](../docs/desk-test.md#look).

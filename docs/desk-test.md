@@ -10,8 +10,9 @@ The MLX90640 is a bare TO39 can with four gold legs. Bend them as little as poss
 
 - **Pins** (datasheet bottom view, tab up): SCL top left, SDA top right, GND bottom left, VDD bottom right. The tab sits between SDA and SCL.
 - **Legs on perfboard:** they sit on a 5.84 mm circle, which doesn't match the 2.54 mm grid in any pattern. A 2 × 1-hole rectangle (two legs in neighbouring holes on each side) is the closest fit. Turn the can so the tab faces the cable end.
-- **Don't trust cheap perfboard pads.** On ours they wouldn't take solder at all. It's easier to solder the wires straight onto the gold legs, with the board only holding the can. The [carrier PCB](../hardware/sensor-carrier/README.md) replaces the perfboard.
+- **Clean perfboard pads first.** On our first board they wouldn't take solder at all. Rubbing them with 2000-grit sandpaper until they shine, then wiping with isopropyl alcohol, made the next board solder cleanly. The [carrier PCB](../hardware/sensor-carrier/README.md) replaces the perfboard.
 - **Wires:** cut the male pins off a STEMMA QT cable (Adafruit 4209) and solder its wires to the legs: red VDD, black GND, blue SDA, yellow SCL. Heat-shrink each joint.
+- **Supply capacitors: don't skip them.** A 100 nF ceramic (marked "104") and a 10 µF electrolytic across VDD and GND, as close to the legs as you can, with the electrolytic's stripe (−) on GND. Melexis asks for them (datasheet section 14). Without them, our second sensor showed stripes every fourth column, 0.7–1.2 °C high; the third sensor, with them, showed none (see [Look](#look)). Soldering the two together first, off the sensor, keeps the heat away from it.
 - **Pull-ups:** a 4.7 kΩ resistor (yellow, violet, red) from SDA to VDD and another from SCL to VDD. Port 2 on the Feather has none, and the sensor needs them.
 - **Glue:** hot glue over the back holds it together. Keep it 1 mm in from the board's edges so the carrier still slides into the enclosure's rails, and as low as you can: ours stands about 12 mm off the board, which the head still fits.
 
@@ -53,6 +54,13 @@ The sensor's own temperature runs a few degrees above the room; the chip warms i
 
 `frame` prints a text map. For a picture, close the monitor and open [`tools/viewer.html`](../tools/README.md) in Chrome. A face against a room is a good first test: about 32–36 °C against 23 °C.
 
-Hold the carrier by the board, not the can, and let it settle for a few minutes: an unevenly warm can shows up as a pattern of stripes or dots in the image.
+Hold the carrier by the board, not the can, and wait **4 minutes** after power-on before trusting the temperatures (Melexis's warm-up; the viewer's run timer shows "settling" until then).
+
+On an even surface, the image should be flat to within a few tenths of a degree. If every fourth column reads high, check the supply capacitors first:
+
+| Sensor | Capacitors | Every 4th column | Spread |
+| --- | --- | --- | --- |
+| Second | none, held by the can | +0.7 to +1.2 °C | 0.7–0.9 °C |
+| Third | 100 nF + 10 µF, held by the board, 4 min warm-up | ±0.1 °C | 0.4 °C |
 
 Next: the trigger, menu button, buzzer and laser on the Feather's pins, then the clock and screen on STEMMA QT port 1.
