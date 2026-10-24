@@ -34,7 +34,9 @@ Plug the Feather into the computer with USB-C (the console runs on the chip's ow
 cargo run --release
 ```
 
-That flashes and opens the serial monitor. Type `help`. If flashing can't connect, put the Feather in download mode (hold **BOOT**, tap **RST**, let go of **BOOT**), flash, then tap **RST** to run.
+That flashes and opens the serial monitor. Type `help`.
+
+To open the console later without flashing, run `espflash monitor` and press **Ctrl+R** once: the monitor stops the chip in its bootloader to identify it, and typing does nothing until the reset starts the firmware. If flashing can't connect, put the Feather in download mode (hold **BOOT**, tap **RST**, let go of **BOOT**), flash, then tap **RST** to run.
 
 To see the image instead of text, close the monitor and open [`tools/viewer.html`](../tools/README.md).
 
