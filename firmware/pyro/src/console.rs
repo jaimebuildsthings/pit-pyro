@@ -5,6 +5,7 @@ use core::cell::Cell;
 use embassy_sync::blocking_mutex::Mutex;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
+use embassy_time::Duration;
 use embedded_io_async::Read;
 use esp_hal::Async;
 use esp_hal::usb::usb_serial_jtag::UsbSerialJtagRx;
@@ -53,8 +54,14 @@ pub async fn task(mut rx: UsbSerialJtagRx<'static, Async>) {
     let mut line = Line::EMPTY;
     let mut buf = [0u8; 32];
     loop {
-        // USB reads can't fail.
-        let Ok(n) = rx.read(&mut buf).await;
+        // The driver waits for a "packet received" interrupt. If that's missed,
+        // the unread bytes block the host from sending more and the console
+        // never wakes again, so look at the FIFO every 50 ms as well.
+        let n = match embassy_time::with_timeout(Duration::from_millis(50), rx.read(&mut buf)).await {
+            // USB reads can't fail.
+            Ok(Ok(n)) => n,
+            Err(_timeout) => continue,
+        };
         for &b in &buf[..n] {
             match b {
                 b'\r' | b'\n' => {
