@@ -23,7 +23,7 @@ The sensor looks out through an **open aperture**: there's no window, because gl
 
 | Where | What |
 | --- | --- |
-| Head, front | MLX90640 (bare TO39) seated flush on a 20 mm perfboard carrier, its lens 1 mm behind the front face; the carrier's edges slide into rails |
+| Head, front | MLX90640 (bare TO39) seated flush on a 20 mm carrier ([PCB](../sensor-carrier/README.md), or perfboard), its lens 1 mm behind the front face; the carrier's edges slide into rails |
 | Head, front top | Laser bore, tilted so the dot lands on the sensor axis 250 mm out (`aim_dist`) |
 | Head, rear face | 0.96″ OLED behind a bevelled window, header at the top. Four corner slots hold it: it slides sideways into the left half's two, and the right half's two close over its other corners. No glue, so it comes out when the case is open |
 | Head, rear face, below the screen | Menu button: a 6 mm tactile button behind a printed cap, under the thumb. It sits in a holder on the left half, with its legs out the back past a backstop bar |
@@ -39,7 +39,7 @@ The sensor looks out through an **open aperture**: there's no window, because gl
 
 The I²C parts chain on STEMMA QT cables: Feather → clock → screen, and the sensor carrier on the Feather's second port.
 
-- **Sensor carrier:** a STEMMA QT to male-header cable (Adafruit 4209), its pins soldered into the perfboard.
+- **Sensor carrier:** a STEMMA QT to male-header cable (Adafruit 4209) with its pins cut off, the wires soldered into the [carrier PCB](../sensor-carrier/README.md).
 - **Clock:** a plug-to-plug cable (Adafruit 4210) from the Feather.
 - **Screen:** the board's STEMMA QT sockets point sideways, and the head has no room for a plug beside the screen. Instead, cut one plug off a **200 mm** STEMMA QT cable (100 mm doesn't reach: the clock is low in the grip, about 110 mm away in a straight line) and solder its wires to the screen's header holes: **Vin** (red), **GND** (black), **Data** = SDA (blue), **Clk** = SCL (yellow). Plug the other end into the clock's second socket.
 - **Menu button:** wire two diagonally opposite legs, so you get the switch whichever way round it goes in. One goes to GND, the other to a free GPIO that can wake the board (GPIO 1–21). Trim the other two legs.
