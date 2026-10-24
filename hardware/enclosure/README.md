@@ -53,7 +53,7 @@ The values below were measured with 0.05 mm vernier calipers on the parts for th
 
 | Parameter | Measured | Check on yours |
 | --- | --- | --- |
-| `car`, `car_back`, `mlx_can_d`, `mlx_can_h` | 20 × 20 × 1.6 mm carrier, with up to 13 mm of joints, resistors and glue behind it (kept 1 mm in from its edges); sensor can Ø9.4, 11.4 mm tall to the lens, 6 mm legs (so it sits flush) | The can's height, and how much you build up behind the carrier |
+| `car`, `car_back`, `mlx_can_d`, `mlx_can_h` | 20 × 20 × 1.6 mm carrier; sensor can Ø9.4, 11.4 mm tall to the lens, 6 mm legs (so it sits flush) | The can's height |
 | `fth`, `fth_top_h`, `fth_bot_h`, `usb_y` | 51.4 × 22.9 × 1.1 mm board, 6.7 mm overall at the battery plug, no parts underneath, USB-C centred and 1.6 mm past the end; STEMMA QT sockets from 16 mm below the antenna end, 5.5 mm overall (`fth_zones`) | Part heights near the antenna end, where the switch sits beside the board |
 | `oled_pcb`, `oled_glass`, `oled_win_ds` | Adafruit 326: 29.5 × 31.7 mm board, 3.3 mm to the glass front, 6.4 mm with the sockets; glass 26.7 × 19.25 mm, 5 mm below the header edge | Where the active area sits: power the screen and measure the lit pixels |
 | `rtc` | Adafruit 5188: 25.85 × 17.75 mm, 7.95 mm thick with the coin cell and sockets | |
