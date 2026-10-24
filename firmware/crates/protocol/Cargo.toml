@@ -1,0 +1,14 @@
+[package]
+name = "protocol"
+description = "Serial console: the command language and the text output of thermal images"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+mlx90640 = { path = "../mlx90640" }
+
+[lints]
+workspace = true

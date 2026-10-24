@@ -1,0 +1,39 @@
+[package]
+name = "pyro"
+description = "Firmware for the pit-pyro handheld tire pyrometer (FeatherS3[D], ESP32-S3)"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "Apache-2.0"
+repository = "https://github.com/jaimebuildsthings/pit-pyro"
+publish = false
+
+[[bin]]
+name = "pyro"
+path = "src/main.rs"
+test = false
+bench = false
+
+[dependencies]
+esp-hal = { version = "~1.2.2", features = ["esp32s3", "unstable"] }
+esp-rtos = { version = "0.4.0", features = ["esp32s3", "embassy"] }
+esp-bootloader-esp-idf = { version = "0.6.0", features = ["esp32s3"] }
+esp-println = { version = "0.18.0", features = ["esp32s3"] }
+embassy-executor = "0.10.0"
+embassy-time = "0.5.0"
+embassy-sync = "0.8.0"
+embassy-futures = "0.1"
+embedded-io-async = "0.7.0"
+static_cell = "2.1.1"
+
+mlx90640 = { path = "../crates/mlx90640" }
+protocol = { path = "../crates/protocol" }
+
+[profile.dev]
+# Unoptimized builds are too slow and too big for the chip.
+opt-level = "s"
+
+[profile.release]
+codegen-units = 1
+debug = 2
+lto = "fat"

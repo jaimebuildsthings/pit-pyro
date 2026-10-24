@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  # Keep these in step with the versions you develop with (`espup --version`, `rustc +esp --version`).
+  ESPUP_VERSION: v0.18.0
+  ESP_TOOLCHAIN_VERSION: 1.97.0.0
+
+jobs:
+  host:
+    name: Host crates (fmt, clippy, tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: firmware
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            firmware/target
+          key: host-${{ hashFiles('firmware/Cargo.lock') }}
+      - run: rustup toolchain install stable --profile minimal --component rustfmt,clippy
+      - run: cargo fmt --all --check
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo test
+
+  firmware:
+    name: Firmware (ESP32-S3)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: firmware/pyro
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.rustup/toolchains/esp
+            ~/.cargo/registry
+            firmware/pyro/target
+          key: fw-esp32s3-${{ env.ESP_TOOLCHAIN_VERSION }}-${{ hashFiles('firmware/pyro/Cargo.lock') }}
+
+      - name: Install the ESP Rust toolchain
+        run: |
+          mkdir -p ~/.local/bin
+          curl -fsSL "https://github.com/esp-rs/espup/releases/download/${ESPUP_VERSION}/espup-x86_64-unknown-linux-gnu" -o ~/.local/bin/espup
+          chmod +x ~/.local/bin/espup
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          ~/.local/bin/espup install --targets esp32s3 --toolchain-version "$ESP_TOOLCHAIN_VERSION" --export-file ~/export-esp.sh
+
+      - name: Format
+        run: |
+          source ~/export-esp.sh
+          cargo fmt --check
+
+      - name: Clippy
+        run: |
+          source ~/export-esp.sh
+          cargo clippy --release -- -D warnings
+
+      - name: Build
+        run: |
+          source ~/export-esp.sh
+          cargo build --release
