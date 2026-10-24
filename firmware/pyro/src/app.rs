@@ -1,14 +1,16 @@
 //! The main loop: reads the thermal sensor, runs console commands and prints
 //! images.
 
+use core::fmt;
 use embassy_futures::select::{Either, select};
 use embassy_time::{Duration, Instant, Timer};
 use esp_hal::Blocking;
 use esp_hal::gpio::Output;
 use esp_hal::i2c::master::I2c;
-use mlx90640::{Calibration, DEFAULT_ADDRESS, EEPROM_WORDS, Mlx90640, PIXELS, RefreshRate, Subpage};
+
+use mlx90640::{Calibration, DEFAULT_ADDRESS, EEPROM_WORDS, Mlx90640, PIXELS, ROWS, RefreshRate, Subpage};
 use protocol::command::HELP;
-use protocol::image::{self, COLUMNS, ROWS, Stats};
+use protocol::image::{self, Stats};
 use protocol::{Command, ParseError};
 
 use crate::console::LINES;
@@ -37,6 +39,15 @@ enum Waiting {
     Dump,
 }
 
+/// What the sensor measured about itself in the latest subpage.
+#[derive(Clone, Copy)]
+struct SensorHealth {
+    /// Supply voltage, V.
+    vdd: f32,
+    /// The sensor's own temperature, °C.
+    temp: f32,
+}
+
 /// App state.
 pub struct App {
     mlx: Mlx90640<I2c<'static, Blocking>>,
@@ -48,15 +59,16 @@ pub struct App {
     emissivity: f32,
     stream: bool,
     waiting: Waiting,
-    /// Subpages read since the last command that waits for fresh data.
-    fresh: u8,
+    /// Subpages read since the last request, as bits; an image is complete at [`BOTH`].
+    fresh_subpages: u8,
     /// The latest raw subpage of each number.
     raw: [Subpage; 2],
     /// Temperatures, each subpage's pixels updated as it arrives.
     image: [f32; PIXELS],
     /// The last complete image, bad pixels filled in.
     shown: [f32; PIXELS],
-    sensor_temp: f32,
+    /// From the latest subpage; `None` until one arrives.
+    health: Option<SensorHealth>,
 }
 
 impl App {
@@ -72,11 +84,11 @@ impl App {
             emissivity: DEFAULT_EMISSIVITY,
             stream: false,
             waiting: Waiting::Nothing,
-            fresh: 0,
+            fresh_subpages: 0,
             raw: [Subpage::new(), Subpage::new()],
             image: [0.0; PIXELS],
             shown: [0.0; PIXELS],
-            sensor_temp: 0.0,
+            health: None,
         }
     }
 
@@ -125,7 +137,8 @@ impl App {
                 }
                 say!("sensor: MLX90640 found, {} bad pixel(s)", cal.bad_pixels().len());
                 self.cal = Some(cal);
-                self.fresh = 0;
+                self.fresh_subpages = 0;
+                self.health = None;
             }
             Err(e) => say!("sensor: unusable calibration: {e:?}"),
         }
@@ -134,13 +147,14 @@ impl App {
     async fn subpage(&mut self, sub: Subpage) {
         let Some(cal) = &self.cal else { return };
         let number = usize::from(sub.number() & 1);
-        self.sensor_temp = cal.ambient(&sub);
-        let reflected = self.sensor_temp - REFLECTED_BELOW_SENSOR;
+        let health = SensorHealth { vdd: cal.vdd(&sub), temp: cal.ambient(&sub) };
+        self.health = Some(health);
+        let reflected = health.temp - REFLECTED_BELOW_SENSOR;
         cal.temperatures(&sub, self.emissivity, reflected, &mut self.image);
         let chess = sub.chess_mode();
         self.raw[number] = sub;
-        self.fresh |= 1 << number;
-        if self.fresh != BOTH {
+        self.fresh_subpages |= 1 << number;
+        if self.fresh_subpages != BOTH {
             return;
         }
         // A complete image: both subpages since the last request.
@@ -154,7 +168,7 @@ impl App {
             Waiting::Nothing => {}
         }
         self.waiting = Waiting::Nothing;
-        self.fresh = 0;
+        self.fresh_subpages = 0;
     }
 
     async fn command(&mut self, line: &str) {
@@ -174,31 +188,22 @@ impl App {
             }
             Command::Status => self.status().await,
             Command::Scan => self.scan().await,
-            Command::Frame | Command::FrameCsv | Command::Dump => {
-                if self.cal.is_none() {
-                    return say!("no sensor on STEMMA 2");
-                }
-                self.waiting = match cmd {
-                    Command::Frame => Waiting::Frame,
-                    Command::FrameCsv => Waiting::Csv,
-                    _ => Waiting::Dump,
-                };
-                self.fresh = 0;
-            }
+            Command::Frame => self.request(Waiting::Frame).await,
+            Command::FrameCsv => self.request(Waiting::Csv).await,
+            Command::Dump => self.request(Waiting::Dump).await,
             Command::Stream(on) => {
                 self.stream = on;
                 say!("stream {}", if on { "on" } else { "off" });
             }
-            Command::Rate(hz) => {
-                let Some(rate) = RefreshRate::from_hz(hz) else { return say!("unsupported rate") };
+            Command::Rate(rate) => {
                 if self.cal.is_none() {
                     return say!("no sensor on STEMMA 2");
                 }
                 match self.mlx.set_refresh_rate(rate) {
-                    Ok(()) => say!("rate {hz} subpages/s ({} images/s)", hz / 2.0),
+                    Ok(()) => say!("rate {} subpages/s ({} images/s)", rate.hz(), rate.hz() / 2.0),
                     Err(_) => say!("sensor: couldn't set the rate"),
                 }
-                self.fresh = 0;
+                self.fresh_subpages = 0;
             }
             Command::Emissivity(e) => {
                 self.emissivity = e;
@@ -207,15 +212,26 @@ impl App {
         }
     }
 
+    /// Prints the next complete image (or dump) once both subpages are fresh.
+    async fn request(&mut self, what: Waiting) {
+        if self.cal.is_none() {
+            return say!("no sensor on STEMMA 2");
+        }
+        self.waiting = what;
+        self.fresh_subpages = 0;
+    }
+
     async fn status(&mut self) {
         say!("pit-pyro {} on ESP32-S3 (FeatherS3[D])", env!("CARGO_PKG_VERSION"));
         match &self.cal {
             None => say!("sensor: not found on STEMMA 2 (SDA IO16, SCL IO15)"),
             Some(cal) => {
                 let rate = self.mlx.refresh_rate().map(RefreshRate::hz).unwrap_or(0.0);
-                let latest = &self.raw[0];
                 say!("sensor: MLX90640 at 0x{DEFAULT_ADDRESS:02X} on STEMMA 2, {rate} subpages/s");
-                say!("supply {:.2} V, sensor {:.1} deg C", cal.vdd(latest), self.sensor_temp);
+                match self.health {
+                    Some(h) => say!("supply {:.2} V, sensor {:.1} deg C", h.vdd, h.temp),
+                    None => say!("supply and sensor temperature: waiting for the first subpage"),
+                }
                 say!("bad pixels: {:?}", cal.bad_pixels());
             }
         }
@@ -232,13 +248,14 @@ impl App {
     async fn print_map(&self) {
         let stats = Stats::of(&self.shown);
         let (lo, hi) = image::scale(&stats);
+        let sensor = self.health.map_or(f32::NAN, |h| h.temp);
         say!(
             "min {:.1}  max {:.1}  centre {:.1}  mean {:.1}  sensor {:.1}  (deg C)",
             stats.min,
             stats.max,
             stats.centre,
             stats.mean,
-            self.sensor_temp
+            sensor
         );
         for row in 0..ROWS {
             let shades = image::map_row(&self.shown, row, lo, hi);
@@ -249,9 +266,7 @@ impl App {
 
     async fn print_csv(&self) {
         for row in 0..ROWS {
-            let mut buf = crate::out::Buf::new();
-            let _ = image::csv_row(&self.shown, row, &mut buf);
-            crate::out::line(buf.as_bytes()).await;
+            say!("{}", image::csv_row(&self.shown, row));
         }
     }
 
@@ -261,10 +276,10 @@ impl App {
             return say!("sensor: EEPROM read failed");
         }
         say!("eeprom");
-        hex_lines(&ee).await;
+        print_hex(&ee).await;
         for sub in &self.raw {
             say!("subpage {}", sub.number());
-            hex_lines(&sub.words).await;
+            print_hex(&sub.words).await;
         }
         say!("end");
     }
@@ -293,16 +308,21 @@ async fn scan_bus(bus: &mut I2c<'static, Blocking>) {
 }
 
 /// Prints words as hex, 16 per line.
-async fn hex_lines(words: &[u16]) {
+async fn print_hex(words: &[u16]) {
     for chunk in words.chunks(16) {
-        let mut buf = crate::out::Buf::new();
-        for (i, w) in chunk.iter().enumerate() {
-            let sep = if i == 0 { "" } else { " " };
-            let _ = core::fmt::Write::write_fmt(&mut buf, format_args!("{sep}{w:04X}"));
-        }
-        crate::out::line(buf.as_bytes()).await;
+        say!("{}", HexWords(chunk));
     }
 }
 
-// The map's width and the image's must agree.
-const _: () = assert!(COLUMNS * ROWS == PIXELS);
+/// Words as space-separated 4-digit hex, for `{}`.
+struct HexWords<'a>(&'a [u16]);
+
+impl fmt::Display for HexWords<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (i, w) in self.0.iter().enumerate() {
+            let sep = if i == 0 { "" } else { " " };
+            write!(f, "{sep}{w:04X}")?;
+        }
+        Ok(())
+    }
+}

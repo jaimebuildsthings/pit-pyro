@@ -7,5 +7,8 @@ rust-version.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[dependencies]
+mlx90640 = { path = "../mlx90640" }
+
 [lints]
 workspace = true

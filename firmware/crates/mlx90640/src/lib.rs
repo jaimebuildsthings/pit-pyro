@@ -12,6 +12,10 @@
 //! Melexis N.V., licensed under the Apache License, Version 2.0, and keeps its
 //! structure so the two can be compared line by line.
 
+// Portions ported from MLX90640_API.c, Copyright (C) 2017 Melexis N.V.,
+// licensed under the Apache License, Version 2.0. Modified: translated from C
+// to Rust for pit-pyro (subpage reads and validation in this file).
+
 #![cfg_attr(not(test), no_std)]
 
 mod calibration;
@@ -38,14 +42,37 @@ pub const SUBPAGE_WORDS: usize = PIXELS + AUX_WORDS + 2;
 pub const DEFAULT_ADDRESS: u8 = 0x33;
 
 const AUX_WORDS: usize = 64;
+
+/// Positions of the words the maths uses in a [`Subpage`] (Melexis's
+/// `frameData`): auxiliary data from the sensor's RAM, then two added by the read.
+pub(crate) mod word {
+    /// Ta_Vbe, the voltage behind the sensor's own temperature.
+    pub const TA_VBE: usize = 768;
+    /// Compensation pixel, subpage 0.
+    pub const CP_SP0: usize = 776;
+    /// The ADC gain measurement.
+    pub const GAIN: usize = 778;
+    /// Ta_PTAT, the proportional-to-temperature reference.
+    pub const TA_PTAT: usize = 800;
+    /// Compensation pixel, subpage 1.
+    pub const CP_SP1: usize = 808;
+    /// The supply voltage measurement.
+    pub const VDD_PIX: usize = 810;
+    /// Copy of the control register, added by the read.
+    pub const CONTROL: usize = 832;
+    /// The subpage number, added by the read.
+    pub const NUMBER: usize = 833;
+}
 const EEPROM_START: u16 = 0x2400;
 const RAM_START: u16 = 0x0400;
 const AUX_START: u16 = 0x0700;
 const STATUS: u16 = 0x8000;
 const CONTROL: u16 = 0x800D;
-/// Written to the status register after each read: clears "new data" and keeps
-/// RAM overwrite enabled, as Melexis's driver does.
-const STATUS_CLEAR: u16 = 0x0030;
+/// Written to the status register after each read: clears "new data" and
+/// turns RAM overwrite off (bit 4), so the sensor can't replace a subpage while
+/// it's being read. Melexis's driver leaves overwrite on (0x0030); at the
+/// fastest rates a 40 ms read could then mix two subpages.
+const STATUS_CLEAR: u16 = 0x0020;
 const STATUS_DATA_READY: u16 = 1 << 3;
 const STATUS_SUBPAGE: u16 = 1;
 const CONTROL_REFRESH_SHIFT: u16 = 7;
@@ -78,47 +105,30 @@ pub enum RefreshRate {
 }
 
 impl RefreshRate {
-    /// Subpages per second.
-    pub const fn hz(self) -> f32 {
-        match self {
-            RefreshRate::Hz0_5 => 0.5,
-            RefreshRate::Hz1 => 1.0,
-            RefreshRate::Hz2 => 2.0,
-            RefreshRate::Hz4 => 4.0,
-            RefreshRate::Hz8 => 8.0,
-            RefreshRate::Hz16 => 16.0,
-            RefreshRate::Hz32 => 32.0,
-            RefreshRate::Hz64 => 64.0,
-        }
+    /// Every rate, slowest first, in the order of their register values.
+    pub const ALL: [RefreshRate; 8] = [
+        RefreshRate::Hz0_5,
+        RefreshRate::Hz1,
+        RefreshRate::Hz2,
+        RefreshRate::Hz4,
+        RefreshRate::Hz8,
+        RefreshRate::Hz16,
+        RefreshRate::Hz32,
+        RefreshRate::Hz64,
+    ];
+
+    /// Subpages per second: 0.5, doubling with each step.
+    pub fn hz(self) -> f32 {
+        f32::from(1u16 << (self as u8)) / 2.0
     }
 
     /// The rate for `hz` subpages per second, if the sensor supports it.
     pub fn from_hz(hz: f32) -> Option<Self> {
-        [
-            RefreshRate::Hz0_5,
-            RefreshRate::Hz1,
-            RefreshRate::Hz2,
-            RefreshRate::Hz4,
-            RefreshRate::Hz8,
-            RefreshRate::Hz16,
-            RefreshRate::Hz32,
-            RefreshRate::Hz64,
-        ]
-        .into_iter()
-        .find(|r| r.hz() == hz)
+        Self::ALL.into_iter().find(|r| r.hz() == hz)
     }
 
-    const fn from_bits(bits: u16) -> Self {
-        match bits & 0b111 {
-            0 => RefreshRate::Hz0_5,
-            1 => RefreshRate::Hz1,
-            2 => RefreshRate::Hz2,
-            3 => RefreshRate::Hz4,
-            4 => RefreshRate::Hz8,
-            5 => RefreshRate::Hz16,
-            6 => RefreshRate::Hz32,
-            _ => RefreshRate::Hz64,
-        }
+    fn from_bits(bits: u16) -> Self {
+        Self::ALL[usize::from(bits & 0b111)]
     }
 }
 
@@ -138,12 +148,12 @@ impl Subpage {
 
     /// Which subpage this is: 0 or 1.
     pub fn number(&self) -> u16 {
-        self.words[833]
+        self.words[word::NUMBER]
     }
 
     /// The control register at the time of the read.
     pub fn control(&self) -> u16 {
-        self.words[832]
+        self.words[word::CONTROL]
     }
 
     /// True if the sensor measured in chess mode (the factory default) rather
@@ -225,17 +235,20 @@ impl<I: I2c> Mlx90640<I> {
     }
 
     /// Reads a subpage if a new one is ready; returns `Ok(false)` if not.
+    ///
+    /// Reads RAM first and only then clears "new data", with overwrite off, so
+    /// the sensor holds the subpage until the read is done.
     pub fn read_subpage(&mut self, out: &mut Subpage) -> Result<bool, Error<I::Error>> {
         let status = self.read_word(STATUS)?;
         if status & STATUS_DATA_READY == 0 {
             return Ok(false);
         }
-        self.write_word(STATUS, STATUS_CLEAR)?;
         let (pixels, rest) = out.words.split_at_mut(PIXELS);
         self.read_words(RAM_START, pixels)?;
         self.read_words(AUX_START, &mut rest[..AUX_WORDS])?;
-        rest[AUX_WORDS] = self.read_word(CONTROL)?;
-        rest[AUX_WORDS + 1] = status & STATUS_SUBPAGE;
+        out.words[word::CONTROL] = self.read_word(CONTROL)?;
+        out.words[word::NUMBER] = status & STATUS_SUBPAGE;
+        self.write_word(STATUS, STATUS_CLEAR)?;
         if out.is_valid() { Ok(true) } else { Err(Error::InvalidData) }
     }
 
@@ -263,5 +276,84 @@ impl<I: I2c> Mlx90640<I> {
         let [v0, v1] = value.to_be_bytes();
         self.i2c.write(self.address, &[r0, r1, v0, v1])?;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use core::convert::Infallible;
+    use embedded_hal::i2c::{ErrorType, Operation};
+    use std::collections::HashMap;
+
+    /// A pretend sensor: 16-bit registers, and a log of what was read and written.
+    #[derive(Default)]
+    struct FakeSensor {
+        registers: HashMap<u16, u16>,
+        log: Vec<(char, u16)>,
+    }
+
+    impl ErrorType for FakeSensor {
+        type Error = Infallible;
+    }
+
+    impl I2c for FakeSensor {
+        fn transaction(&mut self, _address: u8, operations: &mut [Operation<'_>]) -> Result<(), Infallible> {
+            let mut at = 0;
+            for op in operations {
+                match op {
+                    Operation::Write(bytes) => {
+                        at = u16::from_be_bytes([bytes[0], bytes[1]]);
+                        if let [_, _, hi, lo] = bytes[..] {
+                            self.registers.insert(at, u16::from_be_bytes([hi, lo]));
+                            self.log.push(('w', at));
+                        }
+                    }
+                    Operation::Read(buf) => {
+                        self.log.push(('r', at));
+                        for pair in buf.chunks_exact_mut(2) {
+                            pair.copy_from_slice(&self.registers.get(&at).copied().unwrap_or(0).to_be_bytes());
+                            at += 1;
+                        }
+                    }
+                }
+            }
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn refresh_rates() {
+        assert_eq!(RefreshRate::ALL.map(RefreshRate::hz), [0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0]);
+        assert_eq!(RefreshRate::from_hz(4.0), Some(RefreshRate::Hz4));
+        assert_eq!(RefreshRate::from_hz(3.0), None);
+        assert_eq!(RefreshRate::from_bits(3), RefreshRate::Hz4);
+    }
+
+    #[test]
+    fn waits_for_new_data() {
+        let mut mlx = Mlx90640::new(FakeSensor::default(), DEFAULT_ADDRESS);
+        assert_eq!(mlx.read_subpage(&mut Subpage::new()), Ok(false));
+        assert!(mlx.release().log.iter().all(|&(op, _)| op == 'r'));
+    }
+
+    #[test]
+    fn clears_new_data_only_after_reading_ram() {
+        let mut sensor = FakeSensor::default();
+        sensor.registers.insert(STATUS, STATUS_DATA_READY | 1); // subpage 1 ready
+        sensor.registers.insert(RAM_START, 0x1234);
+        let mut mlx = Mlx90640::new(sensor, DEFAULT_ADDRESS);
+        let mut sub = Subpage::new();
+        assert_eq!(mlx.read_subpage(&mut sub), Ok(true));
+        assert_eq!(sub.number(), 1);
+        assert_eq!(sub.words[0], 0x1234);
+
+        let sensor = mlx.release();
+        let clear = sensor.log.iter().position(|&e| e == ('w', STATUS)).unwrap();
+        let last_ram_read = sensor.log.iter().rposition(|&(op, at)| op == 'r' && at < STATUS).unwrap();
+        assert!(clear > last_ram_read, "status cleared before the RAM was read");
+        let written = sensor.registers[&STATUS];
+        assert_eq!(written & STATUS_DATA_READY, 0);
+        assert_eq!(written & (1 << 4), 0, "RAM overwrite must be off");
     }
 }

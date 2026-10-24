@@ -13,7 +13,7 @@ The MLX90640 is a bare TO39 can with four gold legs. Bend them as little as poss
 - **Don't trust cheap perfboard pads.** On ours they wouldn't take solder at all. It's easier to solder the wires straight onto the gold legs, with the board only holding the can. A future carrier will skip the perfboard.
 - **Wires:** cut the male pins off a STEMMA QT cable (Adafruit 4209) and solder its wires to the legs: red VDD, black GND, blue SDA, yellow SCL. Heat-shrink each joint.
 - **Pull-ups:** a 4.7 kΩ resistor (yellow, violet, red) from SDA to VDD and another from SCL to VDD. Port 2 on the Feather has none, and the sensor needs them.
-- **Glue:** hot glue over the back holds it together. Keep it 1 mm in from the board's edges so the carrier still slides into the enclosure's rails, and within 13 mm of the board's back.
+- **Glue:** hot glue over the back holds it together. Keep it 1 mm in from the board's edges so the carrier still slides into the enclosure's rails, and as low as you can: ours stands about 12 mm off the board, which the head still fits.
 
 Solder one leg at a time with a small amount of solder, and check the gap to the neighbouring leg before the next. On a first try, the two neighbouring legs bridged; desoldering broke a leg.
 

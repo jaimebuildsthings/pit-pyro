@@ -1,14 +1,9 @@
 //! Thermal images as text: a shaded map for the console, CSV rows for tools,
 //! and the summary numbers printed with them.
 
-use core::fmt::{self, Write};
+use core::fmt;
 
-/// Columns in the image.
-pub const COLUMNS: usize = 32;
-/// Rows in the image.
-pub const ROWS: usize = 24;
-/// Pixels in the image.
-pub const PIXELS: usize = COLUMNS * ROWS;
+use mlx90640::{COLUMNS, PIXELS, ROWS};
 
 /// Shades from coldest to hottest.
 const SHADES: &[u8; 10] = b" .:-=+*#%@";
@@ -71,15 +66,23 @@ pub fn map_row(image: &[f32; PIXELS], row: usize, lo: f32, hi: f32) -> [u8; COLU
     out
 }
 
-/// Writes one row as comma-separated temperatures with one decimal.
-pub fn csv_row(image: &[f32; PIXELS], row: usize, out: &mut impl Write) -> fmt::Result {
-    for col in 0..COLUMNS {
-        if col > 0 {
-            out.write_char(',')?;
+/// One row as comma-separated temperatures with one decimal, for `{}`.
+pub fn csv_row(image: &[f32; PIXELS], row: usize) -> impl fmt::Display + '_ {
+    CsvRow(&image[row * COLUMNS..(row + 1) * COLUMNS])
+}
+
+struct CsvRow<'a>(&'a [f32]);
+
+impl fmt::Display for CsvRow<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for (col, t) in self.0.iter().enumerate() {
+            if col > 0 {
+                f.write_str(",")?;
+            }
+            write!(f, "{t:.1}")?;
         }
-        write!(out, "{:.1}", image[row * COLUMNS + col])?;
+        Ok(())
     }
-    Ok(())
 }
 
 #[cfg(test)]
@@ -123,8 +126,8 @@ mod tests {
 
     #[test]
     fn csv_has_32_values() {
-        let mut s = String::new();
-        csv_row(&gradient(), 0, &mut s).unwrap();
+        let image = gradient();
+        let s = csv_row(&image, 0).to_string();
         assert_eq!(s.split(',').count(), 32);
         assert!(s.starts_with("20.0,21.0,"));
         assert!(s.ends_with(",51.0"));

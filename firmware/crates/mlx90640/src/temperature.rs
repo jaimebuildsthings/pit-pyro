@@ -1,10 +1,14 @@
+// Ported from MLX90640_API.c, Copyright (C) 2017 Melexis N.V., licensed under
+// the Apache License, Version 2.0. Modified: translated from C to Rust for
+// pit-pyro, with the changes noted in the comments.
+
 //! Supply voltage, ambient temperature and per-pixel object temperatures:
 //! Melexis's `MLX90640_GetVdd`, `MLX90640_GetTa`, `MLX90640_CalculateTo` and
 //! `MLX90640_BadPixelsCorrection`.
 
-use crate::calibration::Calibration;
+use crate::calibration::{Calibration, odd_row};
 use crate::math::{abs, pow2, root4};
-use crate::{COLUMNS, PIXELS, Subpage};
+use crate::{COLUMNS, PIXELS, Subpage, word};
 
 /// Kelvin at 0 °C.
 const KELVIN: f32 = 273.15;
@@ -14,15 +18,15 @@ impl Calibration {
     pub fn vdd(&self, sub: &Subpage) -> f32 {
         let resolution_ram = ((sub.control() & 0x0C00) >> 10) as u8;
         let correction = pow2(self.resolution_ee) / pow2(resolution_ram);
-        (correction * f32::from(sub.words[810] as i16) - f32::from(self.vdd25)) / f32::from(self.k_vdd) + 3.3
+        (correction * f32::from(sub.words[word::VDD_PIX] as i16) - f32::from(self.vdd25)) / f32::from(self.k_vdd) + 3.3
     }
 
     /// The sensor's own temperature (Ta), in °C. Runs a few degrees above the
     /// air around it, since the chip warms itself.
     pub fn ambient(&self, sub: &Subpage) -> f32 {
         let vdd = self.vdd(sub);
-        let ptat = f32::from(sub.words[800] as i16);
-        let ptat_art = ptat / (ptat * self.alpha_ptat + f32::from(sub.words[768] as i16)) * pow2(18);
+        let ptat = f32::from(sub.words[word::TA_PTAT] as i16);
+        let ptat_art = ptat / (ptat * self.alpha_ptat + f32::from(sub.words[word::TA_VBE] as i16)) * pow2(18);
         let ta = ptat_art / (1.0 + self.kv_ptat * (vdd - 3.3)) - f32::from(self.v_ptat25);
         ta / self.kt_ptat + 25.0
     }
@@ -58,12 +62,12 @@ impl Calibration {
             [1.0 / (1.0 + ks_to[0] * 40.0), 1.0, r2, r2 * (1.0 + ks_to[2] * (ct[3] - ct[2]))]
         };
 
-        let gain = f32::from(self.gain_ee) / f32::from(words[778] as i16);
+        let gain = f32::from(self.gain_ee) / f32::from(words[word::GAIN] as i16);
         let chess = sub.chess_mode();
         let calibrated_mode = chess == self.chess_calibrated;
 
         let cp_drift = (1.0 + self.cp_kta * (ta - 25.0)) * (1.0 + self.cp_kv * (vdd - 3.3));
-        let mut ir_cp = [f32::from(words[776] as i16) * gain, f32::from(words[808] as i16) * gain];
+        let mut ir_cp = [f32::from(words[word::CP_SP0] as i16) * gain, f32::from(words[word::CP_SP1] as i16) * gain];
         ir_cp[0] -= f32::from(self.cp_offset[0]) * cp_drift;
         if calibrated_mode {
             ir_cp[1] -= f32::from(self.cp_offset[1]) * cp_drift;
@@ -73,7 +77,7 @@ impl Calibration {
         let ir_cp = ir_cp[usize::from(number & 1)];
 
         for (p, out) in out.iter_mut().enumerate() {
-            let il_pattern = (p / 32 - (p / 64) * 2) as i32;
+            let il_pattern = odd_row(p) as i32;
             let chess_pattern = il_pattern ^ (p - (p / 2) * 2) as i32;
             let pattern = if chess { chess_pattern } else { il_pattern };
             if pattern != i32::from(number) {

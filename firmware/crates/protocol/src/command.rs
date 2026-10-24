@@ -1,5 +1,7 @@
 //! The serial console's command language.
 
+use mlx90640::RefreshRate;
+
 /// A parsed console command.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Command {
@@ -19,9 +21,9 @@ pub enum Command {
     Emissivity(f32),
     /// `dump`: print the EEPROM and two raw subpages in hex, for test fixtures.
     Dump,
-    /// `rate HZ`: subpages per second, one of 0.5, 1, 2, 4, 8, 16, 32, 64.
-    /// A full image takes two subpages.
-    Rate(f32),
+    /// `rate HZ`: subpages per second (see [`RefreshRate`]). A full image
+    /// takes two subpages.
+    Rate(RefreshRate),
 }
 
 /// Why a line didn't parse.
@@ -48,7 +50,7 @@ frame csv                one thermal image as 24 rows of 32 temperatures (deg C)
 stream on|off            a text map for every new image
 emissivity E             surface emissivity, 0.1-1.0 (default 0.95)
 dump                     EEPROM and two raw subpages in hex
-rate HZ                  subpages per second: 0.5 1 2 4 8 16 32 64 (default 4)
+rate HZ                  subpages per second: 0.5 up to 64, doubling (default 4)
 help                     this list";
 
 fn lower(word: &str) -> &str {
@@ -96,10 +98,7 @@ impl Command {
             "rate" => {
                 let hz: f32 =
                     args.next().ok_or(ParseError::Missing("hz"))?.parse().map_err(|_| ParseError::BadArgument)?;
-                if ![0.5, 1.0, 2.0, 4.0, 8.0, 16.0, 32.0, 64.0].contains(&hz) {
-                    return Err(ParseError::BadArgument);
-                }
-                Command::Rate(hz)
+                Command::Rate(RefreshRate::from_hz(hz).ok_or(ParseError::BadArgument)?)
             }
             _ => return Err(ParseError::Unknown),
         };
@@ -126,8 +125,8 @@ mod tests {
         assert_eq!(Command::parse("stream Off"), Ok(Command::Stream(false)));
         assert_eq!(Command::parse("emissivity 0.95"), Ok(Command::Emissivity(0.95)));
         assert_eq!(Command::parse("dump"), Ok(Command::Dump));
-        assert_eq!(Command::parse("rate 0.5"), Ok(Command::Rate(0.5)));
-        assert_eq!(Command::parse("rate 8"), Ok(Command::Rate(8.0)));
+        assert_eq!(Command::parse("rate 0.5"), Ok(Command::Rate(RefreshRate::Hz0_5)));
+        assert_eq!(Command::parse("rate 8"), Ok(Command::Rate(RefreshRate::Hz8)));
     }
 
     #[test]

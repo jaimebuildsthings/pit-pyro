@@ -1,3 +1,7 @@
+// Ported from MLX90640_API.c, Copyright (C) 2017 Melexis N.V., licensed under
+// the Apache License, Version 2.0. Modified: translated from C to Rust for
+// pit-pyro, with the changes noted in the comments.
+
 //! Calibration parameters from the sensor's EEPROM: Melexis's
 //! `MLX90640_ExtractParameters` and the `Extract*` functions it calls, in the
 //! same order and with the same integer scaling.
@@ -11,6 +15,9 @@ pub(crate) const MAX_BAD: usize = 4;
 /// Why the EEPROM can't be used.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CalibrationError {
+    /// All zeros or all ones: no sensor answered, or the EEPROM is erased.
+    /// (Melexis's code would loop forever on this.)
+    Blank,
     /// More than four broken pixels.
     TooManyBrokenPixels,
     /// More than four outlier pixels.
@@ -85,15 +92,35 @@ fn round_i8(x: f32) -> i8 {
     (if x < 0.0 { x - 0.5 } else { x + 0.5 }) as i8
 }
 
-/// `2*(row is odd) + (column is odd)` for pixel `p`: picks one of four
-/// row/column-parity coefficients.
-fn split(p: usize) -> usize {
-    2 * (p / 32 - (p / 64) * 2) + p % 2
+/// 1 if pixel `p` is on an odd row, else 0 (Melexis's `ilPattern`).
+pub(crate) fn odd_row(p: usize) -> usize {
+    (p / COLUMNS) % 2
+}
+
+/// Which of the four row/column-parity coefficients pixel `p` uses:
+/// `2 × (odd row) + (odd column)` (Melexis's `split`).
+fn parity_index(p: usize) -> usize {
+    2 * odd_row(p) + p % 2
+}
+
+/// Doubles `temp` until it reaches `target`, counting the doublings, as Melexis
+/// picks its scale factors. Stops at 31 so a zero or negative value can't loop
+/// forever.
+fn scale_up(mut temp: f32, target: f32) -> u8 {
+    let mut scale = 0;
+    while temp < target && scale < 31 {
+        temp *= 2.0;
+        scale += 1;
+    }
+    scale
 }
 
 impl Calibration {
     /// Extracts the calibration from an EEPROM dump.
     pub fn from_eeprom(ee: &[u16; EEPROM_WORDS]) -> Result<Self, CalibrationError> {
+        if ee.iter().all(|&w| w == 0) || ee.iter().all(|&w| w == 0xFFFF) {
+            return Err(CalibrationError::Blank);
+        }
         let mut c = Calibration {
             k_vdd: 0,
             vdd25: 0,
@@ -222,12 +249,7 @@ impl Calibration {
                 alpha[p] = (0.000001f64 / f64::from(a)) as f32;
             }
         }
-        let mut temp = alpha.iter().copied().fold(alpha[0], f32::max);
-        let mut scale = 0u8;
-        while temp < 32767.4 {
-            temp *= 2.0;
-            scale += 1;
-        }
+        let scale = scale_up(alpha.iter().copied().fold(alpha[0], f32::max), 32767.4);
         for (out, a) in self.alpha.iter_mut().zip(alpha) {
             *out = (a * pow2(scale) + 0.5) as u16;
         }
@@ -262,7 +284,7 @@ impl Calibration {
         let mut kta = [0f32; PIXELS];
         for (p, k) in kta.iter_mut().enumerate() {
             let own = signed((ee[64 + p] & 0x000E) >> 1, 3) as f32 * (1u32 << scale2) as f32;
-            *k = (f32::from(kta_rc[split(p)]) + own) / pow2(scale1);
+            *k = (f32::from(kta_rc[parity_index(p)]) + own) / pow2(scale1);
         }
         let (scale, values) = rescale(&kta);
         self.kta = values;
@@ -279,7 +301,7 @@ impl Calibration {
         let scale = nibble3(ee[56]) as u8;
         let mut kv = [0f32; PIXELS];
         for (p, k) in kv.iter_mut().enumerate() {
-            *k = kv_t[split(p)] / pow2(scale);
+            *k = kv_t[parity_index(p)] / pow2(scale);
         }
         let (scale, values) = rescale(&kv);
         self.kv = values;
@@ -298,28 +320,28 @@ impl Calibration {
     fn extract_deviating_pixels(&mut self, ee: &[u16; EEPROM_WORDS]) -> Result<(), CalibrationError> {
         let mut broken = [0u16; 5];
         let mut outlier = [0u16; 5];
-        let (mut nb, mut no) = (0, 0);
+        let (mut broken_count, mut outlier_count) = (0, 0);
         let mut p = 0;
-        while p < PIXELS && nb < 5 && no < 5 {
+        while p < PIXELS && broken_count < 5 && outlier_count < 5 {
             if ee[64 + p] == 0 {
-                broken[nb] = p as u16;
-                nb += 1;
+                broken[broken_count] = p as u16;
+                broken_count += 1;
             } else if ee[64 + p] & 1 != 0 {
-                outlier[no] = p as u16;
-                no += 1;
+                outlier[outlier_count] = p as u16;
+                outlier_count += 1;
             }
             p += 1;
         }
-        if nb > MAX_BAD {
+        if broken_count > MAX_BAD {
             return Err(CalibrationError::TooManyBrokenPixels);
         }
-        if no > MAX_BAD {
+        if outlier_count > MAX_BAD {
             return Err(CalibrationError::TooManyOutlierPixels);
         }
-        if nb + no > MAX_BAD {
+        if broken_count + outlier_count > MAX_BAD {
             return Err(CalibrationError::TooManyBadPixels);
         }
-        let bad = broken[..nb].iter().chain(&outlier[..no]);
+        let bad = broken[..broken_count].iter().chain(&outlier[..outlier_count]);
         for (i, a) in bad.clone().enumerate() {
             if bad.clone().skip(i + 1).any(|b| adjacent(*a, *b)) {
                 return Err(CalibrationError::AdjacentBadPixels);
@@ -328,7 +350,7 @@ impl Calibration {
         for (slot, p) in self.bad.iter_mut().zip(bad) {
             *slot = *p;
         }
-        self.bad_count = nb + no;
+        self.bad_count = broken_count + outlier_count;
         Ok(())
     }
 }
@@ -343,12 +365,7 @@ fn adjacent(a: u16, b: u16) -> bool {
 /// Scales `values` up by the largest power of two that keeps them within
 /// ±63.4 and rounds them to `i8`, as Melexis stores Kta and Kv.
 fn rescale(values: &[f32; PIXELS]) -> (u8, [i8; PIXELS]) {
-    let mut temp = values.iter().fold(abs(values[0]), |m, &v| m.max(abs(v)));
-    let mut scale = 0u8;
-    while temp < 63.4 {
-        temp *= 2.0;
-        scale += 1;
-    }
+    let scale = scale_up(values.iter().fold(abs(values[0]), |m, &v| m.max(abs(v))), 63.4);
     (scale, values.map(|v| round_i8(v * pow2(scale))))
 }
 
@@ -375,12 +392,26 @@ mod tests {
     }
 
     #[test]
-    fn split_picks_row_and_column_parity() {
-        assert_eq!(split(0), 0); // row 0, column 0
-        assert_eq!(split(1), 1); // row 0, column 1
-        assert_eq!(split(32), 2); // row 1, column 0
-        assert_eq!(split(33), 3); // row 1, column 1
-        assert_eq!(split(64), 0); // row 2, column 0
+    fn parity_index_picks_row_and_column_parity() {
+        assert_eq!(parity_index(0), 0); // row 0, column 0
+        assert_eq!(parity_index(1), 1); // row 0, column 1
+        assert_eq!(parity_index(32), 2); // row 1, column 0
+        assert_eq!(parity_index(33), 3); // row 1, column 1
+        assert_eq!(parity_index(64), 0); // row 2, column 0
+    }
+
+    #[test]
+    fn blank_eeprom_is_an_error_not_a_hang() {
+        assert_eq!(Calibration::from_eeprom(&[0; EEPROM_WORDS]).unwrap_err(), CalibrationError::Blank);
+        assert_eq!(Calibration::from_eeprom(&[0xFFFF; EEPROM_WORDS]).unwrap_err(), CalibrationError::Blank);
+    }
+
+    #[test]
+    fn scale_up_stops_on_zero() {
+        assert_eq!(scale_up(0.0, 63.4), 31);
+        assert_eq!(scale_up(-1.0, 63.4), 31);
+        assert_eq!(scale_up(1.0, 63.4), 6); // 64
+        assert_eq!(scale_up(100.0, 63.4), 0);
     }
 
     #[test]
