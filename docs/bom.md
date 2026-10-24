@@ -12,7 +12,7 @@ About $80. Enough to read frames and zones on the serial console.
 | --- | --- | --- | --- |
 | Unexpected Maker FeatherS3[D] (Adafruit 6399) | 1 | $25 | ESP32-S3, 16 MB flash, 8 MB PSRAM, LiPo charger, USB Serial/JTAG, 2 STEMMA QT ports |
 | MLX90640 sensor, **55° (MLX90640ESF-BAA)**, bare | 1 | $36 | SparkFun SEN-16429. Don't touch the lens; solder the leads quickly; 3.3 V only |
-| Perfboard, ~20 × 20 mm | 1 | $3 | Sensor carrier: sensor, two capacitors, cable |
+| Sensor carrier PCB, 20 × 20 mm ([`hardware/sensor-carrier`](../hardware/sensor-carrier/README.md)) | 1 | ~$2 + shipping | Holds the sensor, its pull-ups and capacitors, and the cable. Perfboard works in a pinch, but its 2.54 mm grid doesn't match the sensor's legs |
 | Through-hole capacitor kit (SparkFun) | 1 | $12 | 100 nF (ceramic, X7R if possible) + 10 µF for the sensor supply. The 10 µF is likely electrolytic: stripe = GND |
 | STEMMA QT / Qwiic cable (JST-SH 1.0 mm, 4-pin) to **male headers**, 150 mm (Adafruit 4209) | 1 | $1 | Sensor carrier to the Feather |
 | STEMMA QT / Qwiic cable, plug both ends, **100 mm** (Adafruit 4210) | 1 | $1 | Feather to the clock |

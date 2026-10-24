@@ -10,7 +10,7 @@ The MLX90640 is a bare TO39 can with four gold legs. Bend them as little as poss
 
 - **Pins** (datasheet bottom view, tab up): SCL top left, SDA top right, GND bottom left, VDD bottom right. The tab sits between SDA and SCL.
 - **Legs on perfboard:** they sit on a 5.84 mm circle, which doesn't match the 2.54 mm grid in any pattern. A 2 × 1-hole rectangle (two legs in neighbouring holes on each side) is the closest fit. Turn the can so the tab faces the cable end.
-- **Don't trust cheap perfboard pads.** On ours they wouldn't take solder at all. It's easier to solder the wires straight onto the gold legs, with the board only holding the can. A future carrier will skip the perfboard.
+- **Don't trust cheap perfboard pads.** On ours they wouldn't take solder at all. It's easier to solder the wires straight onto the gold legs, with the board only holding the can. The [carrier PCB](../hardware/sensor-carrier/README.md) replaces the perfboard.
 - **Wires:** cut the male pins off a STEMMA QT cable (Adafruit 4209) and solder its wires to the legs: red VDD, black GND, blue SDA, yellow SCL. Heat-shrink each joint.
 - **Pull-ups:** a 4.7 kΩ resistor (yellow, violet, red) from SDA to VDD and another from SCL to VDD. Port 2 on the Feather has none, and the sensor needs them.
 - **Glue:** hot glue over the back holds it together. Keep it 1 mm in from the board's edges so the carrier still slides into the enclosure's rails, and as low as you can: ours stands about 12 mm off the board, which the head still fits.

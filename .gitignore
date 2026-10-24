@@ -9,3 +9,8 @@ target/
 
 # Local Claude Code settings
 .claude/settings.local.json
+
+# KiCad local settings and backups
+*.kicad_prl
+*-backups/
+fp-info-cache
