@@ -74,7 +74,7 @@ The full shopping list, with what to look for, is in [bom.md](bom.md).
 Notes:
 - **Laser safety:** use a low-power module and never point it at eyes.
 - **Keep I²C short:** sensor, screen, clock and ESP32 all in one housing.
-- **One USB-C:** the board's port, behind a cover in the grip's butt, does charging, firmware updates and the serial console.
+- **One USB-C:** the board's port, open in the grip's butt, does charging, firmware updates and the serial console.
 - **Emissivity:** tire rubber is about 0.95; adjustable in the menu.
 
 ## Firmware
