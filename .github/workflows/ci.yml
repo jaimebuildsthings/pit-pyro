@@ -11,7 +11,8 @@ permissions:
 env:
   CARGO_TERM_COLOR: always
   # Keep these in step with the versions you develop with (`espup --version`, `rustc +esp --version`).
-  ESPUP_VERSION: v0.18.0
+  # v0.18.0 was withdrawn from GitHub releases (its download now 404s); 0.17.1 matches corner-scales.
+  ESPUP_VERSION: v0.17.1
   ESP_TOOLCHAIN_VERSION: 1.97.0.0
 
 jobs:
