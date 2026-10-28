@@ -86,7 +86,7 @@ The values below were measured with 0.05 mm vernier calipers on the parts for th
 ## Hardware
 
 - 5 × M3 × 20 socket head screws, plus 1 × M3 × 30 and an M3 nut for the trigger hinge, 1 × M3 × 16 and an M3 nut for the switch, and 1 × M3 × 14 as the switch's locating pin
-- 5 × M3 heat-set inserts, about 4 mm OD × 5.7 mm long, pressed into the right half (`insert_d`, `insert_depth`)
+- 5 × M3 heat-set inserts, about 4 mm OD × 5.7 mm long, pressed into the right half (`insert_d`, `insert_depth`). Behind each insert the hole carries on down the post to the outer wall (which stays closed), so a screw that's too long has room instead of bottoming out and splitting the post
 - Foam tape for the battery and the clock board; 0.5 mm thick or less for the battery, since it sits 2 mm from the trigger
 
 ## Assembly
