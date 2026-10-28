@@ -545,7 +545,10 @@ module nut_pocket(depth = 2.6) {
 module right() {
     difference() {
         union() { intersection() { shell(); half_space(1); } fth_stops(); oled_slots(1); }
-        for (p = boss_xz) at_xz(p) along_y(insert_d, -0.1, insert_depth);
+        // Insert pocket, then a screw clearance hole on down the post to the outer wall,
+        // which stays closed: a screw that's too long has room instead of bottoming out
+        // and splitting the post.
+        for (p = boss_xz) at_xz(p) { along_y(insert_d, -0.1, insert_depth); along_y(screw_d, insert_depth - 0.1, Wi); }
         // Hinge screw and the switch screw through the right wall, nuts recessed in its outer face.
         at_xz(pivot_xz) { along_y(screw_d, 0, W / 2 + 1); nut_pocket(); }
         // The switch's nut sits deeper, where the screw's tip ends.
