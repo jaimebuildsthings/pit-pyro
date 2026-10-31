@@ -75,10 +75,11 @@ sw_click = 2.7;               // roller travel to the click...
 sw_bottom = 4.1;              // ...and to where the lever bottoms out
 sw_term = 10;                 // room past the terminal end: the NO tab trimmed to 7 mm (NC cut off), plus the wire joint
 sw_com = [5.5, 13, 5.5];      // COM tab on the back (the side opposite the lever): room it and its wire joint need off the back face, and its span from the terminal end
-// 6 mm tactile button (Adafruit 367), the menu button: body square, body height,
-// stem diameter and height above the body. Its legs come out of two opposite sides.
-btn = [6.1, 2.7];
-btn_stem = [3.5, 1.5];
+// 6 mm tactile button (Adafruit 367), the menu button: body square, body height
+// (back to the tops of the four corner rivets on its metal plate), stem diameter and
+// height above the rivets. Its legs come out of two opposite sides.
+btn = [6.1, 3.6];
+btn_stem = [3.5, 0.45];
 // M3 screws into heat-set inserts
 screw_d = 3.4;
 screw_head_d = 6.2;
@@ -131,6 +132,7 @@ btn_s = 8.5;          // centre, up the rear face
 btn_cap_d = 7;        // printed cap: plunger through the rear wall...
 btn_cap_proud = 1.5;  // ...standing this far out of it...
 btn_flange = [10, 1.2]; // ...and a flange inside that keeps it in (diameter, thickness)
+btn_lip = 1;          // ledge in front of the button that its rivets rest on; the stem sits in its hole
 
 $fa = 4;
 $fs = 0.4;
@@ -165,10 +167,11 @@ laser_tilt = atan((laser_z - sens_z) / aim_dist);
 laser_block = [laser_l + 2, laser_d + 6];     // length, height
 rtc_u = (grip_d - rtc[0]) / 2;                // clock board rear end (u)
 rtc_y = Wi - 0.7 - rtc[2];                    // clock's inner face: 0.7 off the wall (foam tape), so its corners clear the grip's rounding
-btn_tip_x = wall + btn_flange[1] + 0.3;       // stem tip, 0.3 behind the cap's flange
-btn_body_x = btn_tip_x + btn_stem[1];         // front of the button body
+btn_body_x = wall + btn_flange[1] + 0.5 + btn_lip; // front of the button (rivet tops), on the ledge; the cap travels 0.5
+btn_tip_x = btn_body_x - btn_stem[1];         // stem tip, inside the ledge's hole
 btn_back_x = btn_body_x + btn[1];             // back of the body, against the backstop
-btn_hold = [btn_back_x + clear + 2 - wall, btn_flange[0] / 2 + clear + 1.2]; // holder: depth (X), half-height (Z)
+btn_nub = btn_tip_x - wall - btn_flange[1] - 0.2; // nub on the cap's inner face: stops 0.2 short of the stem
+btn_hold = [btn_back_x + 2 * clear + 2 - wall, btn_flange[0] / 2 + clear + 1.2]; // holder: depth (X), half-height (Z)
 
 head_pts = [[rear_x, 0], [head_l, 0], [head_l, head_h], [rear_x + head_h * tan(rear_tilt), head_h]];
 
@@ -381,12 +384,12 @@ module btn_slot() {
     in_rear() {
     // Flange, with room for the cap's travel.
     translate([wall - 0.01, 0, btn_s]) hull() for (y = [0, up]) translate([0, y, 0])
-        along_x(btn_flange[0] + 2 * clear, 0, btn_tip_x + 0.5 - wall + 0.01);
-    // Stem.
-    translate([btn_tip_x, 0, btn_s]) hull() for (y = [0, up]) translate([0, y, 0])
-        along_x(btn_stem[0] + 1, 0, btn_body_x - btn_tip_x + 0.01);
+        along_x(btn_flange[0] + 2 * clear, 0, btn_flange[1] + 0.5 + 0.01);
+    // Ledge: a hole for the stem and the cap's nub.
+    translate([btn_body_x - btn_lip, 0, btn_s]) hull() for (y = [0, up]) translate([0, y, 0])
+        along_x(btn_stem[0] + 1, 0, btn_lip + 0.01);
     // Body, with room for the legs above and below it.
-    slot(btn_body_x, btn_back_x + clear, btn[0] + 2, btn[0] + 2 * clear);
+    slot(btn_body_x, btn_back_x + 2 * clear, btn[0] + 2, btn[0] + 2 * clear);
     // Legs past the backstop bar.
     for (s = [-1, 1]) translate([0, 0, s * 3.9])
         slot(btn_back_x, wall + btn_hold[0] + 1, 3, btn[0] + 2 * clear);
@@ -513,6 +516,7 @@ module trigger_placed(f = pull) in_grip()
 
 // Menu button cap; prints flange down.
 module btn_cap() {
+    translate([0, 0, -btn_nub]) cylinder(d = btn_stem[0] - 0.5, h = btn_nub + 0.01);
     cylinder(d = btn_flange[0], h = btn_flange[1]);
     cylinder(d = btn_cap_d, h = btn_flange[1] + wall + btn_cap_proud - 0.6);
     translate([0, 0, btn_flange[1] + wall + btn_cap_proud - 0.6])
@@ -642,7 +646,7 @@ module sw_lever(f = pull) color("silver") in_grip() {
 if (part == "left") translate([0, 0, W / 2]) rotate([90, 0, 0]) left();
 else if (part == "right") translate([0, 0, W / 2]) rotate([-90, 0, 0]) right();
 else if (part == "trigger") translate([0, 0, trig_t / 2]) rotate([90, 0, 0]) trigger_3d(); // on its side, ear up
-else if (part == "btn_cap") btn_cap();
+else if (part == "btn_cap") translate([0, 0, btn_flange[1] + wall + btn_cap_proud]) rotate([180, 0, 0]) btn_cap(); // outer end down, nub up
 // Test print: the grip's top section of the right half (switch posts, trigger stop,
 // hinge), to try with the trigger and the switch.
 else if (part == "test_trigger") translate([0, 0, W / 2]) rotate([-90, 0, 0])

@@ -60,7 +60,7 @@ The values below were measured with 0.05 mm vernier calipers on the parts for th
 | `bat` | Adafruit 258: 34.65 × 61.6 × 5 mm (5.5 allowing for swelling) | |
 | `laser_d`, `laser_l` | Adafruit 1054: 10.1 mm tube, 30.25 mm long | Both: smaller modules exist |
 | `buzzer_d`, `buzzer_h` | Adafruit 160 (PS1240): 11.8 mm, 6.55 mm tall | |
-| `btn`, `btn_stem` | 6 mm tactile button: 6.1 mm square body, 2.7 mm tall, 3.5 mm stem 1.5 mm above it | Body height: it sets where the cap meets the stem |
+| `btn`, `btn_stem` | 6 mm tactile button: 6.1 mm square body, 3.6 mm from its back to the tops of the four corner rivets on its metal plate, 3.5 mm stem 0.45 mm above them | Body height, measured over the rivets: it sets the slot depth and where the cap's nub meets the stem |
 | `sw`, `sw_holes`, `sw_roller`, `sw_click` | Adafruit 819: 28 × 15.95 × 9.85 mm body, Ø3.2 holes at opposite corners; roller Ø4.5 × 7.75 mm wide, 9.65 mm off the lever side and 8.25 mm past the far end; clicks after 2.7 mm, bottoms out at 4.1 mm | **All of it.** The trigger is laid out around the roller's position and travel |
 
 ## Printing
@@ -72,7 +72,7 @@ The values below were measured with 0.05 mm vernier calipers on the parts for th
 | [`stl/enclosure-left.stl`](stl/enclosure-left.stl) | Counterbored screw holes, alignment lip, battery stops, Feather rails, menu button holder, OLED corner slots |
 | [`stl/enclosure-right.stl`](stl/enclosure-right.stl) | Heat-set insert holes, switch posts, trigger stop, Feather stops, buzzer ring, clock stops, OLED corner slots |
 | [`stl/trigger.stl`](stl/trigger.stl) | Trigger, printed on its side with the stop ear on top. If it rubs in its opening, sand its sides lightly |
-| [`stl/button-cap.stl`](stl/button-cap.stl) | Menu button cap, printed flange down |
+| [`stl/button-cap.stl`](stl/button-cap.stl) | Menu button cap, printed outer end down, nub up; the flange is a 1.5 mm overhang |
 | [`stl/test-trigger.stl`](stl/test-trigger.stl) | **Test print first:** the right half's grip top (about 67 × 76 × 18 mm): hinge, switch posts, trigger stop. With the trigger and the switch on it, check that the switch clicks at full pull and doesn't bottom out |
 
 - The STLs are already oriented: flat outer face down, open side up. No supports, no brim needed.
