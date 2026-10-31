@@ -61,6 +61,7 @@ bat = [34.65, 61.6, 5.5];
 usb_c = [9.0, 7.3, 3.2];      // receptacle width, depth, height
 laser_d = 10.1;               // Adafruit 1054 laser tube
 laser_l = 30.25;
+laser_wire_d = 5;             // channel for its two leads, straight out of its back end
 buzzer_d = 11.8;              // Adafruit 160 piezo (PS1240)
 buzzer_h = 6.6;
 // Roller-lever microswitch (Adafruit 819, a standard-size V switch): length, height (lever side to back), thickness
@@ -404,6 +405,9 @@ module cutouts() {
     // Laser bore, tilted so the dot lands on the sensor axis at aim_dist.
     translate([head_l, 0, laser_z]) rotate([0, laser_tilt, 0])
         along_x(laser_d + 0.6, -laser_block[0] - 1, 2); // printed holes come out small
+    // The laser's leads leave its back end straight: a channel through the back of its block.
+    translate([head_l, 0, laser_z]) rotate([0, laser_tilt, 0])
+        along_x(laser_wire_d, -laser_block[0] - wall - 3, -laser_block[0]);
     // Feather USB-C (charging, flashing, serial console), left open.
     usb_opening();
     in_rear() {
