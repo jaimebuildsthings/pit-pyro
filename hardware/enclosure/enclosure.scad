@@ -61,6 +61,7 @@ bat = [34.65, 61.6, 5.5];
 usb_c = [9.0, 7.3, 3.2];      // receptacle width, depth, height
 laser_d = 10.1;               // Adafruit 1054 laser tube
 laser_l = 30.25;
+laser_wire_d = 5;             // channel for its two leads, straight out of its back end
 buzzer_d = 11.8;              // Adafruit 160 piezo (PS1240)
 buzzer_h = 6.6;
 // Roller-lever microswitch (Adafruit 819, a standard-size V switch): length, height (lever side to back), thickness
@@ -74,10 +75,11 @@ sw_click = 2.7;               // roller travel to the click...
 sw_bottom = 4.1;              // ...and to where the lever bottoms out
 sw_term = 10;                 // room past the terminal end: the NO tab trimmed to 7 mm (NC cut off), plus the wire joint
 sw_com = [5.5, 13, 5.5];      // COM tab on the back (the side opposite the lever): room it and its wire joint need off the back face, and its span from the terminal end
-// 6 mm tactile button (Adafruit 367), the menu button: body square, body height,
-// stem diameter and height above the body. Its legs come out of two opposite sides.
-btn = [6.1, 2.7];
-btn_stem = [3.5, 1.5];
+// 6 mm tactile button (Adafruit 367), the menu button: body square, body height
+// (back to the tops of the four corner rivets on its metal plate), stem diameter and
+// height above the rivets. Its legs come out of two opposite sides.
+btn = [6.1, 3.6];
+btn_stem = [3.5, 0.45];
 // M3 screws into heat-set inserts
 screw_d = 3.4;
 screw_head_d = 6.2;
@@ -130,6 +132,8 @@ btn_s = 8.5;          // centre, up the rear face
 btn_cap_d = 7;        // printed cap: plunger through the rear wall...
 btn_cap_proud = 1.5;  // ...standing this far out of it...
 btn_flange = [10, 1.2]; // ...and a flange inside that keeps it in (diameter, thickness)
+btn_lip = 1;          // ledge in front of the button that its rivets rest on; the stem sits in its hole
+btn_bar = 2.5;        // backstop bar behind the button (X); it runs across to the right wall, where a rest backs its end
 
 $fa = 4;
 $fs = 0.4;
@@ -164,10 +168,12 @@ laser_tilt = atan((laser_z - sens_z) / aim_dist);
 laser_block = [laser_l + 2, laser_d + 6];     // length, height
 rtc_u = (grip_d - rtc[0]) / 2;                // clock board rear end (u)
 rtc_y = Wi - 0.7 - rtc[2];                    // clock's inner face: 0.7 off the wall (foam tape), so its corners clear the grip's rounding
-btn_tip_x = wall + btn_flange[1] + 0.3;       // stem tip, 0.3 behind the cap's flange
-btn_body_x = btn_tip_x + btn_stem[1];         // front of the button body
+btn_body_x = wall + btn_flange[1] + 0.5 + btn_lip; // front of the button (rivet tops), on the ledge; the cap travels 0.5
+btn_tip_x = btn_body_x - btn_stem[1];         // stem tip, inside the ledge's hole
 btn_back_x = btn_body_x + btn[1];             // back of the body, against the backstop
-btn_hold = [btn_back_x + clear + 2 - wall, btn_flange[0] / 2 + clear + 1.2]; // holder: depth (X), half-height (Z)
+btn_nub = btn_tip_x - wall - btn_flange[1] - 0.2; // nub on the cap's inner face: stops 0.2 short of the stem
+btn_bar_h = 2 * 3.9 - 3;                      // bar height (Z), between the legs' slots in btn_slot()
+btn_hold = [btn_back_x + 2 * clear + btn_bar - wall, btn_flange[0] / 2 + clear + 1.2]; // holder: depth (X), half-height (Z)
 
 head_pts = [[rear_x, 0], [head_l, 0], [head_l, head_h], [rear_x + head_h * tan(rear_tilt), head_h]];
 
@@ -359,7 +365,15 @@ module btn_holder() {
     // Past the split it only touches the right half's walls.
     intersection() { cavity(); in_rear() translate([wall + 0.02, 0, btn_s - btn_hold[1]])
         cube([btn_hold[0] - 0.02, btn[0] / 2 + clear + 1.6, 2 * btn_hold[1]]); }
+    // The backstop bar carries on to just short of the right wall, between the legs' slots.
+    intersection() { cavity(); in_rear() translate([btn_back_x + 2 * clear, 0, btn_s - btn_bar_h / 2])
+        cube([btn_bar, Wi - clear, btn_bar_h]); }
 }
+
+// On the right half: a rest on the wall behind the bar's end, so a press on the button
+// is held at both ends of the bar, not only where it leaves the left wall.
+module btn_bar_rest() intersection() { body(); in_rear()
+    translate([btn_back_x + 2 * clear + btn_bar + clear, Wi - 5, btn_s - btn_bar_h / 2]) cube([3, 5 + wall, btn_bar_h]); }
 
 // Slots at the OLED's four corners: blocks on the side walls with a groove open toward
 // the middle. The board slides sideways into the left half's two; the right half's two
@@ -380,12 +394,12 @@ module btn_slot() {
     in_rear() {
     // Flange, with room for the cap's travel.
     translate([wall - 0.01, 0, btn_s]) hull() for (y = [0, up]) translate([0, y, 0])
-        along_x(btn_flange[0] + 2 * clear, 0, btn_tip_x + 0.5 - wall + 0.01);
-    // Stem.
-    translate([btn_tip_x, 0, btn_s]) hull() for (y = [0, up]) translate([0, y, 0])
-        along_x(btn_stem[0] + 1, 0, btn_body_x - btn_tip_x + 0.01);
+        along_x(btn_flange[0] + 2 * clear, 0, btn_flange[1] + 0.5 + 0.01);
+    // Ledge: a hole for the stem and the cap's nub.
+    translate([btn_body_x - btn_lip, 0, btn_s]) hull() for (y = [0, up]) translate([0, y, 0])
+        along_x(btn_stem[0] + 1, 0, btn_lip + 0.01);
     // Body, with room for the legs above and below it.
-    slot(btn_body_x, btn_back_x + clear, btn[0] + 2, btn[0] + 2 * clear);
+    slot(btn_body_x, btn_back_x + 2 * clear, btn[0] + 2, btn[0] + 2 * clear);
     // Legs past the backstop bar.
     for (s = [-1, 1]) translate([0, 0, s * 3.9])
         slot(btn_back_x, wall + btn_hold[0] + 1, 3, btn[0] + 2 * clear);
@@ -404,6 +418,9 @@ module cutouts() {
     // Laser bore, tilted so the dot lands on the sensor axis at aim_dist.
     translate([head_l, 0, laser_z]) rotate([0, laser_tilt, 0])
         along_x(laser_d + 0.6, -laser_block[0] - 1, 2); // printed holes come out small
+    // The laser's leads leave its back end straight: a channel through the back of its block.
+    translate([head_l, 0, laser_z]) rotate([0, laser_tilt, 0])
+        along_x(laser_wire_d, -laser_block[0] - wall - 3, -laser_block[0]);
     // Feather USB-C (charging, flashing, serial console), left open.
     usb_opening();
     in_rear() {
@@ -509,6 +526,7 @@ module trigger_placed(f = pull) in_grip()
 
 // Menu button cap; prints flange down.
 module btn_cap() {
+    translate([0, 0, -btn_nub]) cylinder(d = btn_stem[0] - 0.5, h = btn_nub + 0.01);
     cylinder(d = btn_flange[0], h = btn_flange[1]);
     cylinder(d = btn_cap_d, h = btn_flange[1] + wall + btn_cap_proud - 0.6);
     translate([0, 0, btn_flange[1] + wall + btn_cap_proud - 0.6])
@@ -544,7 +562,7 @@ module nut_pocket(depth = 2.6) {
 
 module right() {
     difference() {
-        union() { intersection() { shell(); half_space(1); } fth_stops(); oled_slots(1); }
+        union() { intersection() { shell(); half_space(1); } fth_stops(); oled_slots(1); btn_bar_rest(); }
         // Insert pocket, then a screw clearance hole on down the post to the outer wall,
         // which stays closed: a screw that's too long has room instead of bottoming out
         // and splitting the post.
@@ -638,7 +656,7 @@ module sw_lever(f = pull) color("silver") in_grip() {
 if (part == "left") translate([0, 0, W / 2]) rotate([90, 0, 0]) left();
 else if (part == "right") translate([0, 0, W / 2]) rotate([-90, 0, 0]) right();
 else if (part == "trigger") translate([0, 0, trig_t / 2]) rotate([90, 0, 0]) trigger_3d(); // on its side, ear up
-else if (part == "btn_cap") btn_cap();
+else if (part == "btn_cap") translate([0, 0, btn_flange[1] + wall + btn_cap_proud]) rotate([180, 0, 0]) btn_cap(); // outer end down, nub up
 // Test print: the grip's top section of the right half (switch posts, trigger stop,
 // hinge), to try with the trigger and the switch.
 else if (part == "test_trigger") translate([0, 0, W / 2]) rotate([-90, 0, 0])
