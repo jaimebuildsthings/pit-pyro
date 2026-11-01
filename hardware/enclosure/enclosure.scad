@@ -133,6 +133,7 @@ btn_cap_d = 7;        // printed cap: plunger through the rear wall...
 btn_cap_proud = 1.5;  // ...standing this far out of it...
 btn_flange = [10, 1.2]; // ...and a flange inside that keeps it in (diameter, thickness)
 btn_lip = 1;          // ledge in front of the button that its rivets rest on; the stem sits in its hole
+btn_bar = 2.5;        // backstop bar behind the button (X); it runs across to the right wall, where a rest backs its end
 
 $fa = 4;
 $fs = 0.4;
@@ -171,7 +172,8 @@ btn_body_x = wall + btn_flange[1] + 0.5 + btn_lip; // front of the button (rivet
 btn_tip_x = btn_body_x - btn_stem[1];         // stem tip, inside the ledge's hole
 btn_back_x = btn_body_x + btn[1];             // back of the body, against the backstop
 btn_nub = btn_tip_x - wall - btn_flange[1] - 0.2; // nub on the cap's inner face: stops 0.2 short of the stem
-btn_hold = [btn_back_x + 2 * clear + 2 - wall, btn_flange[0] / 2 + clear + 1.2]; // holder: depth (X), half-height (Z)
+btn_bar_h = 2 * 3.9 - 3;                      // bar height (Z), between the legs' slots in btn_slot()
+btn_hold = [btn_back_x + 2 * clear + btn_bar - wall, btn_flange[0] / 2 + clear + 1.2]; // holder: depth (X), half-height (Z)
 
 head_pts = [[rear_x, 0], [head_l, 0], [head_l, head_h], [rear_x + head_h * tan(rear_tilt), head_h]];
 
@@ -363,7 +365,15 @@ module btn_holder() {
     // Past the split it only touches the right half's walls.
     intersection() { cavity(); in_rear() translate([wall + 0.02, 0, btn_s - btn_hold[1]])
         cube([btn_hold[0] - 0.02, btn[0] / 2 + clear + 1.6, 2 * btn_hold[1]]); }
+    // The backstop bar carries on to just short of the right wall, between the legs' slots.
+    intersection() { cavity(); in_rear() translate([btn_back_x + 2 * clear, 0, btn_s - btn_bar_h / 2])
+        cube([btn_bar, Wi - clear, btn_bar_h]); }
 }
+
+// On the right half: a rest on the wall behind the bar's end, so a press on the button
+// is held at both ends of the bar, not only where it leaves the left wall.
+module btn_bar_rest() intersection() { body(); in_rear()
+    translate([btn_back_x + 2 * clear + btn_bar + clear, Wi - 5, btn_s - btn_bar_h / 2]) cube([3, 5 + wall, btn_bar_h]); }
 
 // Slots at the OLED's four corners: blocks on the side walls with a groove open toward
 // the middle. The board slides sideways into the left half's two; the right half's two
@@ -552,7 +562,7 @@ module nut_pocket(depth = 2.6) {
 
 module right() {
     difference() {
-        union() { intersection() { shell(); half_space(1); } fth_stops(); oled_slots(1); }
+        union() { intersection() { shell(); half_space(1); } fth_stops(); oled_slots(1); btn_bar_rest(); }
         // Insert pocket, then a screw clearance hole on down the post to the outer wall,
         // which stays closed: a screw that's too long has room instead of bottoming out
         // and splitting the post.
