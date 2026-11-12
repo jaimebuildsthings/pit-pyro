@@ -26,7 +26,7 @@ The sensor looks out through an **open aperture**: there's no window, because gl
 | Head, front | MLX90640 (bare TO39) seated flush on a 20 mm carrier ([PCB](../sensor-carrier/README.md), or perfboard), its lens 1 mm behind the front face; the carrier's edges slide into rails |
 | Head, front top | Laser bore, tilted so the dot lands on the sensor axis 250 mm out (`aim_dist`), with a 5 mm channel through the back of its block for the leads (`laser_wire_d`) |
 | Head, rear face | 0.96″ OLED behind a bevelled window, header at the top. Four corner slots hold it: it slides sideways into the left half's two, and the right half's two close over its other corners. No glue, so it comes out when the case is open |
-| Head, rear face, below the screen | Menu button: a 6 mm tactile button behind a printed cap, under the thumb. It sits in a holder on the left half, with its legs out the back past a backstop bar. The bar runs across to the right wall, where a rest on the right half backs its end, so a press is held at both ends |
+| Head, rear face, below the screen | Menu button: a 6 mm tactile button behind a printed cap, under the thumb. It's soldered to a 20 × 13.45 mm perfboard square that slides into two rails on the left half, so a press is held along the board's whole top and bottom edges. A plate in front of the button stops the cap |
 | Head, right wall | Piezo buzzer, with sound holes |
 | Grip, front top | Printed trigger: a 14 mm wide paddle, centred, filling an opening at the top of the grip's front, just under the head, hinged at its top on an M3 screw. Its back face presses the roller of a standard-size lever microswitch, which pushes it back out. At rest the roller is pressed in 0.5 mm (`sw_preload`); a full pull moves it another 3.1 mm (`sw_pull`): 0.9 mm past the click, 0.5 mm short of where the lever bottoms out. That's biased toward overtravel, because a switch that never clicks is worse than one that bottoms. The bottom of the paddle swings in about 4.8 mm. A shoulder below the opening is the rest stop; an 8 mm tall ear on the paddle's right side meets a post on the right wall at full pull. Inside the grip, the paddle reaches 3 mm further right (`trig_pad`) so all of the 7.75 mm roller bears on it; the part you pull stays centred |
 | Grip, centre right | The microswitch, upside down (terminals at the bottom, roller up at the trigger), beside the Feather's low top end (its end stops 1.6 mm short of the Feather's STEMMA QT sockets), its roller 4.5 mm right of centre. It sits on two posts off the right wall: an M3 × 16 screw and nut clamp it through one hole, and an M3 × 14 screwed in from outside is a steel locating pin through the other |
@@ -42,7 +42,7 @@ The I²C parts chain on STEMMA QT cables: Feather → clock → screen, and the 
 - **Sensor carrier:** a STEMMA QT to male-header cable (Adafruit 4209) with its pins cut off, the wires soldered into the [carrier PCB](../sensor-carrier/README.md).
 - **Clock:** a plug-to-plug cable (Adafruit 4210) from the Feather.
 - **Screen:** the board's STEMMA QT sockets point sideways, and the head has no room for a plug beside the screen. Instead, cut one plug off a **200 mm** STEMMA QT cable (100 mm doesn't reach: the clock is low in the grip, about 110 mm away in a straight line) and solder its wires to the screen's header holes: **Vin** (red), **GND** (black), **Data** = SDA (blue), **Clk** = SCL (yellow). Plug the other end into the clock's second socket.
-- **Menu button:** wire two diagonally opposite legs, so you get the switch whichever way round it goes in. One goes to GND, the other to a free GPIO that can wake the board (GPIO 1–21). Trim the other two legs.
+- **Menu button:** solder it to a 20 × 13.45 mm perfboard square, centred, and solder its wires on the back: two diagonally opposite legs, so you get the switch whichever way round it goes in. One goes to GND, the other to a free GPIO that can wake the board (GPIO 1–21).
 - **Feather:** solder the switch, menu button, buzzer and laser wires from the top (the side facing the clock) and trim the leads flush underneath, because the board sits close to the battery and the rails hold its long edges (0.8 mm, `fth_edge`). The sensor's 150 mm cable reaches from the head down to the Feather. Run the switch's wires straight down to the Feather's rear-edge pins, not past the clock: the lower grip is crowded. The clock's cables bend 90° right at the plug, so the 8 mm between each end of the clock and the wall is plenty.
 
 ## Measure your parts first
@@ -60,7 +60,8 @@ The values below were measured with 0.05 mm vernier calipers on the parts for th
 | `bat` | Adafruit 258: 34.65 × 61.6 × 5 mm (5.5 allowing for swelling) | |
 | `laser_d`, `laser_l` | Adafruit 1054: 10.1 mm tube, 30.25 mm long | Both: smaller modules exist |
 | `buzzer_d`, `buzzer_h` | Adafruit 160 (PS1240): 11.8 mm, 6.55 mm tall | |
-| `btn`, `btn_stem` | 6 mm tactile button: 6.1 mm square body, 3.6 mm from its back to the tops of the four corner rivets on its metal plate, 3.5 mm stem 0.45 mm above them | Body height, measured over the rivets: it sets the slot depth and where the cap's nub meets the stem |
+| `btn`, `btn_stem` | 6 mm tactile button: 6.1 mm square body, 3.6 mm from its back to the tops of the four corner rivets on its metal plate, 3.5 mm stem 0.45 mm above them | Body height, measured over the rivets: it sets where the cap's nub meets the stem |
+| `btn_pcb` | Perfboard square for the button: 20 × 13.45 × 1.6 mm, one row of holes past the button on every side | Cut yours to match: the rails are sized to it |
 | `sw`, `sw_holes`, `sw_roller`, `sw_click` | Adafruit 819: 28 × 15.95 × 9.85 mm body, Ø3.2 holes at opposite corners; roller Ø4.5 × 7.75 mm wide, 9.65 mm off the lever side and 8.25 mm past the far end; clicks after 2.7 mm, bottoms out at 4.1 mm | **All of it.** The trigger is laid out around the roller's position and travel |
 
 ## Printing
@@ -73,6 +74,7 @@ The values below were measured with 0.05 mm vernier calipers on the parts for th
 | [`stl/enclosure-right.stl`](stl/enclosure-right.stl) | Heat-set insert holes, switch posts, trigger stop, Feather stops, buzzer ring, clock stops, OLED corner slots |
 | [`stl/trigger.stl`](stl/trigger.stl) | Trigger, printed on its side with the stop ear on top. If it rubs in its opening, sand its sides lightly |
 | [`stl/button-cap.stl`](stl/button-cap.stl) | Menu button cap, printed outer end down, nub up; the flange is a 1.5 mm overhang |
+| [`stl/test-button.stl`](stl/test-button.stl) | **Test print:** the left half around the menu button (about 18 × 22 × 28 mm): rear wall with the cap's hole, the plate, and the rails for the button's board. With the cap and the button on its board, check that the board slides in and the cap clicks the button |
 | [`stl/test-trigger.stl`](stl/test-trigger.stl) | **Test print first:** the right half's grip top (about 67 × 76 × 18 mm): hinge, switch posts, trigger stop. With the trigger and the switch on it, check that the switch clicks at full pull and doesn't bottom out |
 
 - The STLs are already oriented: flat outer face down, open side up. No supports, no brim needed.
@@ -93,7 +95,7 @@ The values below were measured with 0.05 mm vernier calipers on the parts for th
 
 1. Press the heat-set inserts into the right half.
 2. Wire the switch's **COM** (the bent tab on the side opposite the lever; leave it as it is) and **NO** (the end tab nearer that side). Cut the NC end tab off and trim the NO tab to about 7 mm past the body with flush cutters, then solder the wires and cover the joints with heat-shrink. Put a nut in each pocket on the right half's outer face (the switch's sits deeper). Hold the microswitch on its posts in the right half (it overhangs the split by half a millimetre), terminals down and roller up toward the trigger. Screw the M3 × 14 in from outside through the post and the switch's hole near the terminals (it self-taps into the post), then clamp the switch with the M3 × 16 through its other hole into the nut. Plug both cables into the clock and bend each one sharply just past its plug, toward the middle of the grip (away from the wall); then stick the clock board to the right wall between its stops on foam tape, and the buzzer into its ring.
-3. Drop the button cap into its hole in the left half's rear wall from the inside, flange inward, then slide the menu button into its slot behind it, legs pointing up and down. A dab of glue keeps the button in its slot while you work. Push the laser into its bore, leads first through the channel at the back (a dab of glue holds it). The bore is split between the halves, so if it's tight, sand or scrape the grooves until it fits. Cut the sensor carrier to 19.5–20 mm and file its edges so it slides into its rails. Slide the OLED sideways into the two corner slots on the left half, glass toward the window. Stick the battery to the left wall between its stops, then slide the Feather into its rails over it, parts up and USB-C into the opening in the butt.
+3. Drop the button cap into its hole in the left half's rear wall from the inside, flange inward, then slide the button's board into its rails from the split side, button toward the cap, until it stops at the left wall. Push the laser into its bore, leads first through the channel at the back (a dab of glue holds it). The bore is split between the halves, so if it's tight, sand or scrape the grooves until it fits. Cut the sensor carrier to 19.5–20 mm and file its edges so it slides into its rails. Slide the OLED sideways into the two corner slots on the left half, glass toward the window. Stick the battery to the left wall between its stops, then slide the Feather into its rails over it, parts up and USB-C into the opening in the butt.
 4. Fit the trigger into its opening, holding the switch's lever back as it drops in, and wire everything (see [Wiring](#wiring)). Keep the I²C runs short.
 5. Close the halves (the lip on the left half locates the right) and screw them together. The M3 × 30 goes through the trigger's hinge, into the nut recessed in the right side.
 
@@ -101,7 +103,7 @@ The OLED's header ends up at the rear, so the image will be upside down unless t
 
 ## Changing the model
 
-Open `enclosure.scad` in OpenSCAD and press **F5** to preview. Use the `part` setting (or the Customizer panel) to switch between the `assembly`, `cutaway`, `left`, `right`, `trigger`, `btn_cap` and `test_trigger` views; `pull` (0 to 1) swings the trigger. Then export:
+Open `enclosure.scad` in OpenSCAD and press **F5** to preview. Use the `part` setting (or the Customizer panel) to switch between the `assembly`, `cutaway`, `left`, `right`, `trigger`, `btn_cap`, `test_trigger` and `test_button` views; `pull` (0 to 1) swings the trigger. Then export:
 
 ```sh
 openscad --export-format binstl -D 'part="left"'      -o stl/enclosure-left.stl  enclosure.scad
@@ -109,6 +111,7 @@ openscad --export-format binstl -D 'part="right"'     -o stl/enclosure-right.stl
 openscad --export-format binstl -D 'part="trigger"'   -o stl/trigger.stl         enclosure.scad
 openscad --export-format binstl -D 'part="btn_cap"'   -o stl/button-cap.stl      enclosure.scad
 openscad --export-format binstl -D 'part="test_trigger"' -o stl/test-trigger.stl enclosure.scad
+openscad --export-format binstl -D 'part="test_button"'  -o stl/test-button.stl  enclosure.scad
 ```
 
 `part="check"` is the fit check: it renders where the stand-in parts overlap the shell and where the two halves overlap each other. A clean design leaves only zero-thickness contact faces, such as boards resting in their slots. Run it after any layout change.
