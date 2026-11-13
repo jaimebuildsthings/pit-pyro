@@ -40,6 +40,7 @@ Every four reads make a run. **Hold** the trigger to turn off (deep sleep, with 
 | --- | --- |
 | New session | Starts a fresh session (an event day); earlier sessions are kept |
 | View | Steps through stored sessions and runs: each corner's zones, and single readings |
+| Camera | Live view of what the sensor sees: the image as a heat map, with the hottest, mean and coldest temperatures. For showing people in the pits. Stays on until either button is pressed (the 5 s timeout doesn't apply) |
 | Delete last reading | Throws away a bad scan, so you can redo that tire |
 | Clear sessions | Erases every stored reading |
 | Settings | Units (°F / °C), emissivity, set the clock |
@@ -87,7 +88,7 @@ Same stack and conventions as corner-balancer: Rust, `esp-hal` + Embassy, host-t
 | `zones` crate (`no_std`, host-tested) | Find the tire in the frame (warm band vs. background), split it into 3 (or 5) zones, and average each zone's pixels over several frames |
 | Capture flow | Trigger → average 4–8 frames → zones → beep → show → store → next corner. Every four reads make a run. Hold or idle timeout = deep sleep; either button wakes it (ext1 wake on two pins) |
 | **Run log** (host-tested record format) | Append-only log in a dedicated flash partition (like corner-balancer's `calib`, but larger). One record per corner reading: session, run number, corner, zones and clock time. "Delete last reading" appends a tombstone record; "Clear sessions" erases the partition. Survives power-off and firmware updates |
-| Screen UI | Big text: run number, next corner, last zones. Battery level. Scanning needs no menu; the menu is a list stepped by the menu button and selected by the trigger, with a 5 s timeout back to scanning |
+| Screen UI | Big text: run number, next corner, last zones. Battery level. Scanning needs no menu; the menu is a list stepped by the menu button and selected by the trigger, with a 5 s timeout back to scanning. The camera view (heat map and readings, `crates/screen`) is what the screen shows until scanning exists |
 | Settings | Units, emissivity: a small two-slot crash-safe record, separate from the run log |
 | Record format | Same JSON-lines style as the scales protocol, e.g. `{"v":1,"type":"tire","session":2,"run":4,"corner":"LF","zones_c":[78.4,81.2,84.9],"time":"2026-10-18T10:42:07"}` |
 

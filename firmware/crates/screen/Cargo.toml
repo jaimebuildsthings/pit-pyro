@@ -1,0 +1,15 @@
+[package]
+name = "screen"
+description = "What the 128 x 64 OLED shows: a thermal image and its readings, drawn into the SSD1306's frame layout"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+mlx90640 = { path = "../mlx90640" }
+protocol = { path = "../protocol" }
+
+[lints]
+workspace = true
