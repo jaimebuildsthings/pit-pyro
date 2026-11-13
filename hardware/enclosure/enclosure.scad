@@ -302,16 +302,19 @@ module rounded_rect(size, r) offset(r = r) square([size[0] - 2 * r, size[1] - 2 
 module usb_opening() in_grip() translate([grip_d / 2 + usb_y, usb_yc, -grip_l - 1])
     linear_extrude(wall + 2) rounded_rect(usb_open, 1.5);
 
-// Side rails that hold a board's two edges, from the board's edge out to the
-// side wall; pcb_slots() cuts the groove for the board into them.
+// Rails along a board's top and bottom edges, across the head from wall to wall;
+// pcb_slots() cuts the groove, which ends just past each side edge. Each half holds
+// the board square on its own: it slides into one half's grooves from the split until
+// it meets their ends, and the other half's grooves slip over the rest of its edges as
+// the case closes, so it can't tip over in between.
 // at = [x, z] of the board's lower rear corner, size = [length (X), width (Y), height (Z)].
-module pcb_rails(at, size, grip = 1, pad = 1.5) for (s = [-1, 1])
-    translate([at[0] - pad, s > 0 ? size[1] / 2 - grip : -Wi - 0.01, at[1] - pad])
-        cube([size[0] + 2 * pad, Wi - size[1] / 2 + grip + 0.01, size[2] + 2 * pad]);
+module pcb_rails(at, size, grip = 1, pad = 1.5) for (top = [0, 1])
+    translate([at[0] - pad, -Wi - 0.01, top ? at[1] + size[2] - grip : at[1] - pad])
+        cube([size[0] + 2 * pad, 2 * Wi + 0.02, grip + pad]);
 
-module pcb_slots(at, size, grip = 1) for (s = [-1, 1])
-    translate([at[0] - clear, s > 0 ? size[1] / 2 - grip - 0.01 : -size[1] / 2 - clear, at[1] - clear])
-        cube([size[0] + 2 * clear, grip + clear + 0.01, size[2] + 2 * clear]);
+module pcb_slots(at, size)
+    translate([at[0] - clear, -size[1] / 2 - clear, at[1] - clear])
+        cube([size[0] + 2 * clear, size[1] + 2 * clear, size[2] + 2 * clear]);
 
 car_at = [mlx_x, sens_z - car[1] / 2];
 car_size = [car[2], car[0], car[1]];
