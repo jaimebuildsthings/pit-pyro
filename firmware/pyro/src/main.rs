@@ -1,7 +1,8 @@
 //! Firmware for the pit-pyro handheld tire pyrometer, on a FeatherS3[D].
 //!
 //! Desk-test stage: reads the MLX90640 thermal camera on STEMMA QT port 2 and
-//! prints its images at the serial console, over the board's USB-C port.
+//! prints its images at the serial console, over the board's USB-C port; shows
+//! them on the OLED on STEMMA QT port 1 when one is plugged in.
 //! Type `help`.
 
 #![no_std]
@@ -9,6 +10,7 @@
 
 mod app;
 mod console;
+mod oled;
 mod out;
 
 use embassy_executor::Spawner;
