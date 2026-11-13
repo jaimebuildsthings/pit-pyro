@@ -28,6 +28,7 @@ static_cell = "2.1.1"
 
 mlx90640 = { path = "../crates/mlx90640" }
 protocol = { path = "../crates/protocol" }
+screen = { path = "../crates/screen" }
 
 [profile.dev]
 # Unoptimized builds are too slow and too big for the chip.

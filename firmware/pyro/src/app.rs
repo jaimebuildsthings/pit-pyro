@@ -12,8 +12,10 @@ use mlx90640::{Calibration, DEFAULT_ADDRESS, EEPROM_WORDS, Mlx90640, PIXELS, ROW
 use protocol::command::HELP;
 use protocol::image::{self, Stats};
 use protocol::{Command, ParseError};
+use screen::Frame;
 
 use crate::console::LINES;
+use crate::oled::Screen;
 use crate::out::say;
 
 /// How often to ask the sensor for a new subpage.
@@ -69,6 +71,9 @@ pub struct App {
     shown: [f32; PIXELS],
     /// From the latest subpage; `None` until one arrives.
     health: Option<SensorHealth>,
+    /// The OLED on STEMMA 1, once found.
+    screen: Option<Screen>,
+    next_screen_try: Instant,
 }
 
 impl App {
@@ -89,6 +94,8 @@ impl App {
             image: [0.0; PIXELS],
             shown: [0.0; PIXELS],
             health: None,
+            screen: None,
+            next_screen_try: Instant::now(),
         }
     }
 
@@ -104,6 +111,9 @@ impl App {
     }
 
     async fn poll(&mut self) {
+        if self.screen.is_none() && Instant::now() >= self.next_screen_try {
+            self.find_screen().await;
+        }
         if self.cal.is_none() {
             if Instant::now() >= self.next_try {
                 self.connect().await;
@@ -119,7 +129,28 @@ impl App {
                 say!("sensor: lost on STEMMA 2; retrying");
                 self.cal = None;
                 self.next_try = Instant::now() + RETRY;
+                // Don't leave the last image up as if it were live.
+                self.show(&Frame::border()).await;
             }
+        }
+    }
+
+    /// Looks for the OLED; shows its border until there's an image.
+    async fn find_screen(&mut self) {
+        self.next_screen_try = Instant::now() + RETRY;
+        let Some(screen) = Screen::find(&mut self.stemma1) else { return };
+        say!("screen: SSD1306 found at 0x{:02X}", screen.address());
+        self.screen = Some(screen);
+        self.show(&Frame::border()).await;
+    }
+
+    /// Sends a frame to the OLED, if there is one.
+    async fn show(&mut self, frame: &Frame) {
+        let Some(screen) = &self.screen else { return };
+        if screen.show(&mut self.stemma1, frame).is_err() {
+            say!("screen: lost on STEMMA 1; retrying");
+            self.screen = None;
+            self.next_screen_try = Instant::now() + RETRY;
         }
     }
 
@@ -160,6 +191,7 @@ impl App {
         // A complete image: both subpages since the last request.
         self.shown = self.image;
         cal.correct_bad_pixels(&mut self.shown, chess);
+        self.show(&Frame::thermal(&self.shown)).await;
         match self.waiting {
             Waiting::Frame => self.print_map().await,
             Waiting::Csv => self.print_csv().await,
@@ -234,6 +266,10 @@ impl App {
                 }
                 say!("bad pixels: {:?}", cal.bad_pixels());
             }
+        }
+        match &self.screen {
+            Some(s) => say!("screen: SSD1306 at 0x{:02X} on STEMMA 1", s.address()),
+            None => say!("screen: not found on STEMMA 1 (SDA IO8, SCL IO9)"),
         }
         say!("emissivity {:.2}, stream {}", self.emissivity, if self.stream { "on" } else { "off" });
     }

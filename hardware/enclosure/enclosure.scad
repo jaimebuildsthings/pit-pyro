@@ -9,14 +9,16 @@
 //          openscad --export-format binstl -D 'part="trigger"'   -o stl/trigger.stl             enclosure.scad
 //          openscad --export-format binstl -D 'part="btn_cap"'   -o stl/button-cap.stl          enclosure.scad
 //          openscad --export-format binstl -D 'part="test_trigger"' -o stl/test-trigger.stl   enclosure.scad
+//          openscad --export-format binstl -D 'part="test_button"' -o stl/test-button.stl     enclosure.scad
 // Parts:   assembly (closed shell), cutaway (left half + stand-in parts),
 //          left, right, trigger, btn_cap (each laid flat, ready to slice), check
 //          (renders nothing but contact faces when every part fits);
-//          test_trigger: a small test print of the trigger and switch.
+//          test_trigger: a small test print of the trigger and switch;
+//          test_button: a small test print of the menu button's cap, plate and rails.
 //
 // Licensed under CERN-OHL-P-2.0, see ../LICENSE.
 
-part = "assembly"; // [assembly, cutaway, left, right, trigger, btn_cap, check, test_trigger]
+part = "assembly"; // [assembly, cutaway, left, right, trigger, btn_cap, check, test_trigger, test_button]
 pull = 0;          // [0:0.1:1] trigger position in the views: 0 at rest, 1 fully pulled
 
 /* [Shell] */
@@ -61,6 +63,7 @@ bat = [34.65, 61.6, 5.5];
 usb_c = [9.0, 7.3, 3.2];      // receptacle width, depth, height
 laser_d = 10.1;               // Adafruit 1054 laser tube
 laser_l = 30.25;
+laser_wire_d = 5;             // channel for its two leads, straight out of its back end
 buzzer_d = 11.8;              // Adafruit 160 piezo (PS1240)
 buzzer_h = 6.6;
 // Roller-lever microswitch (Adafruit 819, a standard-size V switch): length, height (lever side to back), thickness
@@ -74,10 +77,11 @@ sw_click = 2.7;               // roller travel to the click...
 sw_bottom = 4.1;              // ...and to where the lever bottoms out
 sw_term = 10;                 // room past the terminal end: the NO tab trimmed to 7 mm (NC cut off), plus the wire joint
 sw_com = [5.5, 13, 5.5];      // COM tab on the back (the side opposite the lever): room it and its wire joint need off the back face, and its span from the terminal end
-// 6 mm tactile button (Adafruit 367), the menu button: body square, body height,
-// stem diameter and height above the body. Its legs come out of two opposite sides.
-btn = [6.1, 2.7];
-btn_stem = [3.5, 1.5];
+// 6 mm tactile button (Adafruit 367), the menu button: body square, body height
+// (back to the tops of the four corner rivets on its metal plate), stem diameter and
+// height above the rivets. Its legs come out of two opposite sides.
+btn = [6.1, 3.6];
+btn_stem = [3.5, 0.45];
 // M3 screws into heat-set inserts
 screw_d = 3.4;
 screw_head_d = 6.2;
@@ -121,6 +125,11 @@ sw_y = -0.45;         // switch's inner face, just left of the split: its roller
 sw_screw_l = 16;      // M3 screw through the switch and its post into a nut
 sw_pin_l = 14;        // M3 screw from outside, through the other post, its shank the switch's locating pin
 nut_af = 5.5;         // M3 nut across flats, for the hinge screw
+nut_t = 2.4;          // M3 nut thickness
+insert_l = 5.7;       // heat-set insert length, pressed in flush with its boss at the split
+case_screw_l = 20;    // M3 screws closing the halves, into the inserts
+trig_screw_l = 30;    // M3 screw through the trigger's hinge into a nut
+min_thread = 2;       // the least thread engagement any screw may have
 buzzer_xz = [28, 20];
 oled_s = 15.5;        // bottom edge of the OLED module, up the rear face
 rtc_v = 57.5;         // clock board top edge, along the grip; it lies across the grip below the switch's wires
@@ -130,6 +139,12 @@ btn_s = 8.5;          // centre, up the rear face
 btn_cap_d = 7;        // printed cap: plunger through the rear wall...
 btn_cap_proud = 1.5;  // ...standing this far out of it...
 btn_flange = [10, 1.2]; // ...and a flange inside that keeps it in (diameter, thickness)
+btn_cap_travel = 1.2; // how far the cap moves in before its flange meets the plate
+btn_lip = 1;          // plate in front of the button: the cap's stop, with a hole for its nub
+// The button is soldered to a perfboard square, centred on it, that slides into rails along
+// its top and bottom edges: across the head (Y), up the rear face (Z), thickness.
+btn_pcb = [20, 13.45, 1.6];
+btn_rail = [1, 1.5];  // rails: how much of each edge they hold, and their wall thickness
 
 $fa = 4;
 $fs = 0.4;
@@ -164,10 +179,29 @@ laser_tilt = atan((laser_z - sens_z) / aim_dist);
 laser_block = [laser_l + 2, laser_d + 6];     // length, height
 rtc_u = (grip_d - rtc[0]) / 2;                // clock board rear end (u)
 rtc_y = Wi - 0.7 - rtc[2];                    // clock's inner face: 0.7 off the wall (foam tape), so its corners clear the grip's rounding
-btn_tip_x = wall + btn_flange[1] + 0.3;       // stem tip, 0.3 behind the cap's flange
-btn_body_x = btn_tip_x + btn_stem[1];         // front of the button body
-btn_back_x = btn_body_x + btn[1];             // back of the body, against the backstop
-btn_hold = [btn_back_x + clear + 2 - wall, btn_flange[0] / 2 + clear + 1.2]; // holder: depth (X), half-height (Z)
+btn_plate_x = wall + btn_flange[1] + btn_cap_travel + btn_lip; // back of the plate in front of the button
+btn_body_x = btn_plate_x + 0.3;               // front of the button (rivet tops), clear of the plate
+btn_tip_x = btn_body_x - btn_stem[1];         // stem tip
+btn_back_x = btn_body_x + btn[1];             // back of the body = front of its board, which rests against the rails' front lips
+btn_groove = btn_pcb[2] + 0.4;                // rails' groove: the board has 0.4 to move back when pressed
+btn_nub = btn_tip_x - wall - btn_flange[1] - 0.2; // nub on the cap's inner face: 0.2 short of the stem; a press closes that, the board's 0.4 and the click within the cap's travel
+assert(0.2 + 0.4 + 0.3 < btn_cap_travel, "the cap must travel past the gap, the board's play and the button's click");
+// Screws: each nut pocket is as deep as its screw needs, and every screw's thread engagement is checked.
+// Y runs across the head; the left half's counterbores seat the heads screw_head_h in from its outer face.
+trig_nut_depth = W - screw_head_h - trig_screw_l + nut_t + 0.2; // hinge nut pocket: the screw's tip lands at the nut's outer face
+sw_nut_depth = W / 2 - (sw_y + sw_screw_l - nut_t - 0.2);      // switch clamp's nut pocket, the same way
+function thread(tip, from, to) = max(0, min(tip, to) - from);  // engagement of a tip at Y = tip in a thread from..to
+case_thread = thread(-W / 2 + screw_head_h + case_screw_l, 0, insert_l);
+trig_thread = thread(-W / 2 + screw_head_h + trig_screw_l, W / 2 - trig_nut_depth, W / 2 - trig_nut_depth + nut_t);
+sw_thread = thread(sw_y + sw_screw_l, W / 2 - sw_nut_depth, W / 2 - sw_nut_depth + nut_t);
+sw_pin_thread = (W / 2 - screw_head_h) - (sw_y + sw[2]);       // the pin self-taps into its post only...
+sw_pin_reach = (sw_y + sw[2]) - (W / 2 - screw_head_h - sw_pin_l); // ...and its shank reaches this far into the switch
+echo(case_thread = case_thread, trig_thread = trig_thread, sw_thread = sw_thread, sw_pin_thread = sw_pin_thread, sw_pin_reach = sw_pin_reach);
+assert(min(case_thread, trig_thread, sw_thread, sw_pin_thread) >= min_thread, "a screw is too short for its thread");
+assert(sw_pin_reach >= 3 && sw_pin_reach <= sw[2] + 1.5, "the switch pin must reach well into the switch, and not far past it");
+assert(-W / 2 + screw_head_h + trig_screw_l <= W / 2 && sw_y + sw_screw_l <= W / 2, "a screw sticks out of the right half");
+btn_front = [btn_plate_x - wall, btn_flange[0] / 2 + clear + 1.2]; // block in front of the button: depth (X), half-height (Z)
+btn_hold = [btn_back_x + btn_groove + btn_rail[1] - wall, btn_pcb[1] / 2 + clear + btn_rail[1]]; // everything: depth (X), half-height (Z)
 
 head_pts = [[rear_x, 0], [head_l, 0], [head_l, head_h], [rear_x + head_h * tan(rear_tilt), head_h]];
 
@@ -268,16 +302,19 @@ module rounded_rect(size, r) offset(r = r) square([size[0] - 2 * r, size[1] - 2 
 module usb_opening() in_grip() translate([grip_d / 2 + usb_y, usb_yc, -grip_l - 1])
     linear_extrude(wall + 2) rounded_rect(usb_open, 1.5);
 
-// Side rails that hold a board's two edges, from the board's edge out to the
-// side wall; pcb_slots() cuts the groove for the board into them.
+// Rails along a board's top and bottom edges, across the head from wall to wall;
+// pcb_slots() cuts the groove, which ends just past each side edge. Each half holds
+// the board square on its own: it slides into one half's grooves from the split until
+// it meets their ends, and the other half's grooves slip over the rest of its edges as
+// the case closes, so it can't tip over in between.
 // at = [x, z] of the board's lower rear corner, size = [length (X), width (Y), height (Z)].
-module pcb_rails(at, size, grip = 1, pad = 1.5) for (s = [-1, 1])
-    translate([at[0] - pad, s > 0 ? size[1] / 2 - grip : -Wi - 0.01, at[1] - pad])
-        cube([size[0] + 2 * pad, Wi - size[1] / 2 + grip + 0.01, size[2] + 2 * pad]);
+module pcb_rails(at, size, grip = 1, pad = 1.5) for (top = [0, 1])
+    translate([at[0] - pad, -Wi - 0.01, top ? at[1] + size[2] - grip : at[1] - pad])
+        cube([size[0] + 2 * pad, 2 * Wi + 0.02, grip + pad]);
 
-module pcb_slots(at, size, grip = 1) for (s = [-1, 1])
-    translate([at[0] - clear, s > 0 ? size[1] / 2 - grip - 0.01 : -size[1] / 2 - clear, at[1] - clear])
-        cube([size[0] + 2 * clear, grip + clear + 0.01, size[2] + 2 * clear]);
+module pcb_slots(at, size)
+    translate([at[0] - clear, -size[1] / 2 - clear, at[1] - clear])
+        cube([size[0] + 2 * clear, size[1] + 2 * clear, size[2] + 2 * clear]);
 
 car_at = [mlx_x, sens_z - car[1] / 2];
 car_size = [car[2], car[0], car[1]];
@@ -342,24 +379,43 @@ module sw_pin_hole() at_xz(gp(sw_hole(0)[0], sw_hole(0)[1])) {
 }
 
 // Post on the right wall that the trigger's ear meets at full pull; its face
-// is cut to the ear's angle there.
+// is cut to the ear's angle there. It stays 1 mm inside the ear's top and bottom
+// edges: taller, the cut leaves lips that wrap the ear's path and it binds.
 module trig_stop() difference() {
-    in_grip() translate([trig_back - 8, trig_t / 2 + trig_pad + 0.7, -(trig_inner_bot + 1)])
-        cube([8, Wi - trig_t / 2 - trig_pad - 0.7 + 0.01, trig_ear[1] + 2]);
+    in_grip() translate([trig_back - 8, trig_t / 2 + trig_pad + 0.7, -trig_inner_bot + 1])
+        cube([8, Wi - trig_t / 2 - trig_pad - 0.7 + 0.01, trig_ear[1] - 2]);
     for (f = [0 : 0.1 : 1]) trigger_placed(f);
 }
 
-// Menu button holder, on the left half: a block on the rear wall, rising from the
-// left wall past the split, with a slot open toward the right half. The button
-// drops in from that side, legs up and down, against a backstop bar; the cap's
-// flange sits in front of it.
+// Menu button holder, on the left half. In front: a block on the rear wall, rising from the
+// left wall past the split, that holds the cap's flange and stops it with a plate. Behind:
+// two rails along the button board's top and bottom edges. The board slides in from the
+// split until it meets the rails' closed ends at the left; a press pushes it against the
+// rails' back lips along both 20 mm edges.
 module btn_holder() {
-    intersection() { body(); in_rear() translate([wall - 0.01, -Wi - 0.01, btn_s - btn_hold[1]])
-        cube([btn_hold[0] + 0.01, Wi + 0.02, 2 * btn_hold[1]]); }
-    // Past the split it only touches the right half's walls.
-    intersection() { cavity(); in_rear() translate([wall + 0.02, 0, btn_s - btn_hold[1]])
-        cube([btn_hold[0] - 0.02, btn[0] / 2 + clear + 1.6, 2 * btn_hold[1]]); }
+    rail_x0 = btn_back_x - btn_rail[1];
+    module rails(y0, y1) for (s = [-1, 1]) in_rear()
+        translate([rail_x0, y0, s > 0 ? btn_s + btn_pcb[1] / 2 - btn_rail[0] : btn_s - btn_pcb[1] / 2 - clear - btn_rail[1]])
+            cube([btn_hold[0] + wall - rail_x0, y1 - y0, btn_rail[0] + clear + btn_rail[1]]);
+    intersection() { body(); union() {
+        in_rear() translate([wall - 0.01, -Wi - 0.01, btn_s - btn_front[1]]) cube([btn_front[0] + 0.01, Wi + 0.01, 2 * btn_front[1]]);
+        rails(-Wi - 0.01, 0);
+        // The rails' closed ends, where the board stops.
+        in_rear() translate([rail_x0, -Wi - 0.01, btn_s - btn_hold[1]]) cube([btn_hold[0] + wall - rail_x0, Wi - btn_pcb[0] / 2 - clear + 0.01, 2 * btn_hold[1]]);
+    } }
+    // Past the split they only touch the right half's walls, and clear its screw boss.
+    difference() {
+        intersection() { cavity(); union() {
+            in_rear() translate([wall + 0.02, 0, btn_s - btn_front[1]]) cube([btn_front[0] - 0.02, btn[0] / 2 + clear + 1.6, 2 * btn_front[1]]);
+            rails(0, btn_pcb[0] / 2);
+        } }
+        for (p = boss_xz) at_xz(p) along_y(boss_d + 2 * clear, -0.01, Wi + 1);
+    }
 }
+
+// On the right half: a stop past the board's right end, so it can't slide out of its rails.
+module btn_pcb_stop() intersection() { body(); in_rear()
+    translate([btn_back_x, btn_pcb[0] / 2 + clear, btn_s - 3]) cube([btn_groove, Wi - btn_pcb[0] / 2 - clear + wall, 6]); }
 
 // Slots at the OLED's four corners: blocks on the side walls with a groove open toward
 // the middle. The board slides sideways into the left half's two; the right half's two
@@ -380,15 +436,12 @@ module btn_slot() {
     in_rear() {
     // Flange, with room for the cap's travel.
     translate([wall - 0.01, 0, btn_s]) hull() for (y = [0, up]) translate([0, y, 0])
-        along_x(btn_flange[0] + 2 * clear, 0, btn_tip_x + 0.5 - wall + 0.01);
-    // Stem.
-    translate([btn_tip_x, 0, btn_s]) hull() for (y = [0, up]) translate([0, y, 0])
-        along_x(btn_stem[0] + 1, 0, btn_body_x - btn_tip_x + 0.01);
-    // Body, with room for the legs above and below it.
-    slot(btn_body_x, btn_back_x + clear, btn[0] + 2, btn[0] + 2 * clear);
-    // Legs past the backstop bar.
-    for (s = [-1, 1]) translate([0, 0, s * 3.9])
-        slot(btn_back_x, wall + btn_hold[0] + 1, 3, btn[0] + 2 * clear);
+        along_x(btn_flange[0] + 2 * clear, 0, btn_flange[1] + btn_cap_travel + 0.01);
+    // Plate: a hole for the cap's nub.
+    translate([btn_plate_x - btn_lip - 0.01, 0, btn_s]) hull() for (y = [0, up]) translate([0, y, 0])
+        along_x(btn_stem[0] + 1, 0, btn_lip + 0.02);
+    // The board's grooves, open toward +Y.
+    slot(btn_back_x, btn_back_x + btn_groove, btn_pcb[1] + 2 * clear, btn_pcb[0] + 2 * clear);
     }
 }
 
@@ -404,6 +457,9 @@ module cutouts() {
     // Laser bore, tilted so the dot lands on the sensor axis at aim_dist.
     translate([head_l, 0, laser_z]) rotate([0, laser_tilt, 0])
         along_x(laser_d + 0.6, -laser_block[0] - 1, 2); // printed holes come out small
+    // The laser's leads leave its back end straight: a channel through the back of its block.
+    translate([head_l, 0, laser_z]) rotate([0, laser_tilt, 0])
+        along_x(laser_wire_d, -laser_block[0] - wall - 3, -laser_block[0]);
     // Feather USB-C (charging, flashing, serial console), left open.
     usb_opening();
     in_rear() {
@@ -509,6 +565,7 @@ module trigger_placed(f = pull) in_grip()
 
 // Menu button cap; prints flange down.
 module btn_cap() {
+    translate([0, 0, -btn_nub]) cylinder(d = btn_stem[0] - 0.5, h = btn_nub + 0.01);
     cylinder(d = btn_flange[0], h = btn_flange[1]);
     cylinder(d = btn_cap_d, h = btn_flange[1] + wall + btn_cap_proud - 0.6);
     translate([0, 0, btn_flange[1] + wall + btn_cap_proud - 0.6])
@@ -544,15 +601,15 @@ module nut_pocket(depth = 2.6) {
 
 module right() {
     difference() {
-        union() { intersection() { shell(); half_space(1); } fth_stops(); oled_slots(1); }
+        union() { intersection() { shell(); half_space(1); } fth_stops(); oled_slots(1); btn_pcb_stop(); }
         // Insert pocket, then a screw clearance hole on down the post to the outer wall,
         // which stays closed: a screw that's too long has room instead of bottoming out
         // and splitting the post.
         for (p = boss_xz) at_xz(p) { along_y(insert_d, -0.1, insert_depth); along_y(screw_d, insert_depth - 0.1, Wi); }
         // Hinge screw and the switch screw through the right wall, nuts recessed in its outer face.
-        at_xz(pivot_xz) { along_y(screw_d, 0, W / 2 + 1); nut_pocket(); }
+        at_xz(pivot_xz) { along_y(screw_d, 0, W / 2 + 1); nut_pocket(trig_nut_depth); }
         // The switch's nut sits deeper, where the screw's tip ends.
-        at_xz(gp(sw_hole(1)[0], sw_hole(1)[1])) nut_pocket(W / 2 - (sw_y + sw_screw_l - 2.6));
+        at_xz(gp(sw_hole(1)[0], sw_hole(1)[1])) nut_pocket(sw_nut_depth);
         sw_pin_hole();
     }
 }
@@ -610,13 +667,12 @@ module parts() {
         color("gold") translate([(grip_d - bat[0]) / 2, -Wi + 0.45, -bat_v - clear - bat[1]])
             cube([bat[0], bat[2], bat[1]]);
     }
-    // Menu button: body, stem, and its four legs bent straight back.
+    // Menu button: body and stem, on its perfboard square.
     color("white") in_rear() {
         translate([btn_body_x, -btn[0] / 2, btn_s - btn[0] / 2]) cube([btn[1], btn[0], btn[0]]);
         translate([0, 0, btn_s]) along_x(btn_stem[0], btn_tip_x, btn_body_x);
-        for (s = [-1, 1], t = [-1, 1]) translate([btn_body_x + 1, t * 2.25 - 0.35, btn_s + s * 3.25 - 0.35])
-            cube([btn[1] + 2.5, 0.7, 0.7]);
     }
+    color("green") in_rear() translate([btn_back_x, -btn_pcb[0] / 2, btn_s - btn_pcb[1] / 2]) cube([btn_pcb[2], btn_pcb[0], btn_pcb[1]]);
 }
 
 // The switch's lever and roller, with the roller pushed in by the trigger at
@@ -638,9 +694,14 @@ module sw_lever(f = pull) color("silver") in_grip() {
 if (part == "left") translate([0, 0, W / 2]) rotate([90, 0, 0]) left();
 else if (part == "right") translate([0, 0, W / 2]) rotate([-90, 0, 0]) right();
 else if (part == "trigger") translate([0, 0, trig_t / 2]) rotate([90, 0, 0]) trigger_3d(); // on its side, ear up
-else if (part == "btn_cap") btn_cap();
+else if (part == "btn_cap") translate([0, 0, btn_flange[1] + wall + btn_cap_proud]) rotate([180, 0, 0]) btn_cap(); // outer end down, nub up
 // Test print: the grip's top section of the right half (switch posts, trigger stop,
 // hinge), to try with the trigger and the switch.
+// Test print: the left half around the menu button (rear wall, cap hole, plate, rails),
+// to try with the cap and the button on its board.
+else if (part == "test_button") translate([0, 0, W / 2]) rotate([90, 0, 0])
+    intersection() { left(); in_rear() translate([-1, -W / 2 - 1, btn_s - btn_hold[1] - 1])
+        cube([wall + btn_hold[0] + 2, W / 2 + btn_pcb[0] / 2 + 2, 2 * btn_hold[1] + 2]); }
 else if (part == "test_trigger") translate([0, 0, W / 2]) rotate([-90, 0, 0])
     intersection() { right(); in_grip() translate([-10, 0, -52]) cube([70, 30, 64]); }
 else if (part == "cutaway") {
