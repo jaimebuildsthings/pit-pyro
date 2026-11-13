@@ -125,6 +125,11 @@ sw_y = -0.45;         // switch's inner face, just left of the split: its roller
 sw_screw_l = 16;      // M3 screw through the switch and its post into a nut
 sw_pin_l = 14;        // M3 screw from outside, through the other post, its shank the switch's locating pin
 nut_af = 5.5;         // M3 nut across flats, for the hinge screw
+nut_t = 2.4;          // M3 nut thickness
+insert_l = 5.7;       // heat-set insert length, pressed in flush with its boss at the split
+case_screw_l = 20;    // M3 screws closing the halves, into the inserts
+trig_screw_l = 30;    // M3 screw through the trigger's hinge into a nut
+min_thread = 2;       // the least thread engagement any screw may have
 buzzer_xz = [28, 20];
 oled_s = 15.5;        // bottom edge of the OLED module, up the rear face
 rtc_v = 57.5;         // clock board top edge, along the grip; it lies across the grip below the switch's wires
@@ -181,6 +186,20 @@ btn_back_x = btn_body_x + btn[1];             // back of the body = front of its
 btn_groove = btn_pcb[2] + 0.4;                // rails' groove: the board has 0.4 to move back when pressed
 btn_nub = btn_tip_x - wall - btn_flange[1] - 0.2; // nub on the cap's inner face: 0.2 short of the stem; a press closes that, the board's 0.4 and the click within the cap's travel
 assert(0.2 + 0.4 + 0.3 < btn_cap_travel, "the cap must travel past the gap, the board's play and the button's click");
+// Screws: each nut pocket is as deep as its screw needs, and every screw's thread engagement is checked.
+// Y runs across the head; the left half's counterbores seat the heads screw_head_h in from its outer face.
+trig_nut_depth = W - screw_head_h - trig_screw_l + nut_t + 0.2; // hinge nut pocket: the screw's tip lands at the nut's outer face
+sw_nut_depth = W / 2 - (sw_y + sw_screw_l - nut_t - 0.2);      // switch clamp's nut pocket, the same way
+function thread(tip, from, to) = max(0, min(tip, to) - from);  // engagement of a tip at Y = tip in a thread from..to
+case_thread = thread(-W / 2 + screw_head_h + case_screw_l, 0, insert_l);
+trig_thread = thread(-W / 2 + screw_head_h + trig_screw_l, W / 2 - trig_nut_depth, W / 2 - trig_nut_depth + nut_t);
+sw_thread = thread(sw_y + sw_screw_l, W / 2 - sw_nut_depth, W / 2 - sw_nut_depth + nut_t);
+sw_pin_thread = (W / 2 - screw_head_h) - (sw_y + sw[2]);       // the pin self-taps into its post only...
+sw_pin_reach = (sw_y + sw[2]) - (W / 2 - screw_head_h - sw_pin_l); // ...and its shank reaches this far into the switch
+echo(case_thread = case_thread, trig_thread = trig_thread, sw_thread = sw_thread, sw_pin_thread = sw_pin_thread, sw_pin_reach = sw_pin_reach);
+assert(min(case_thread, trig_thread, sw_thread, sw_pin_thread) >= min_thread, "a screw is too short for its thread");
+assert(sw_pin_reach >= 3 && sw_pin_reach <= sw[2] + 1.5, "the switch pin must reach well into the switch, and not far past it");
+assert(-W / 2 + screw_head_h + trig_screw_l <= W / 2 && sw_y + sw_screw_l <= W / 2, "a screw sticks out of the right half");
 btn_front = [btn_plate_x - wall, btn_flange[0] / 2 + clear + 1.2]; // block in front of the button: depth (X), half-height (Z)
 btn_hold = [btn_back_x + btn_groove + btn_rail[1] - wall, btn_pcb[1] / 2 + clear + btn_rail[1]]; // everything: depth (X), half-height (Z)
 
@@ -357,10 +376,11 @@ module sw_pin_hole() at_xz(gp(sw_hole(0)[0], sw_hole(0)[1])) {
 }
 
 // Post on the right wall that the trigger's ear meets at full pull; its face
-// is cut to the ear's angle there.
+// is cut to the ear's angle there. It stays 1 mm inside the ear's top and bottom
+// edges: taller, the cut leaves lips that wrap the ear's path and it binds.
 module trig_stop() difference() {
-    in_grip() translate([trig_back - 8, trig_t / 2 + trig_pad + 0.7, -(trig_inner_bot + 1)])
-        cube([8, Wi - trig_t / 2 - trig_pad - 0.7 + 0.01, trig_ear[1] + 2]);
+    in_grip() translate([trig_back - 8, trig_t / 2 + trig_pad + 0.7, -trig_inner_bot + 1])
+        cube([8, Wi - trig_t / 2 - trig_pad - 0.7 + 0.01, trig_ear[1] - 2]);
     for (f = [0 : 0.1 : 1]) trigger_placed(f);
 }
 
@@ -584,9 +604,9 @@ module right() {
         // and splitting the post.
         for (p = boss_xz) at_xz(p) { along_y(insert_d, -0.1, insert_depth); along_y(screw_d, insert_depth - 0.1, Wi); }
         // Hinge screw and the switch screw through the right wall, nuts recessed in its outer face.
-        at_xz(pivot_xz) { along_y(screw_d, 0, W / 2 + 1); nut_pocket(); }
+        at_xz(pivot_xz) { along_y(screw_d, 0, W / 2 + 1); nut_pocket(trig_nut_depth); }
         // The switch's nut sits deeper, where the screw's tip ends.
-        at_xz(gp(sw_hole(1)[0], sw_hole(1)[1])) nut_pocket(W / 2 - (sw_y + sw_screw_l - 2.6));
+        at_xz(gp(sw_hole(1)[0], sw_hole(1)[1])) nut_pocket(sw_nut_depth);
         sw_pin_hole();
     }
 }
