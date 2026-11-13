@@ -6,9 +6,10 @@ Rust, no ESP-IDF: `esp-hal` and Embassy on the FeatherS3[D] (ESP32-S3).
 | --- | --- |
 | `crates/mlx90640/` | Driver for the MLX90640 thermal array and its temperature maths, ported from Melexis's reference driver. Tested against Melexis's own C code on a dump from a real sensor |
 | `crates/protocol/` | The console's command language, and thermal images as text (map and CSV) |
+| `crates/screen/` | What the 128 × 64 OLED shows: the image as a dithered heat map, the hottest, mean and coldest temperatures, and a 1-pixel frame around the panel's edge |
 | `pyro/` | The ESP32-S3 program |
 
-This is the desk-test stage: the firmware reads the sensor and prints what it sees. The trigger, menu, screen, clock and run log come next ([plan](../docs/plan.md#firmware)).
+This is the desk-test stage: the firmware reads the sensor, prints what it sees and shows it on the OLED. The trigger, menu, clock and run log come next ([plan](../docs/plan.md#firmware)).
 
 ## Host tests (stable Rust, no hardware)
 
@@ -47,6 +48,7 @@ To see the image instead of text, close the monitor and open [`tools/viewer.html
 | Thermal sensor | STEMMA QT port 2 (silkscreen I2C2, the socket nearer the USB-C): SDA IO16, SCL IO15, powered by LDO2 |
 | LDO2 enable (port 2's power, off in deep sleep) | IO39 |
 | STEMMA QT port 1 (I2C1; the Feather's battery gauge is on it) | SDA IO8, SCL IO9 |
+| OLED (SSD1306, 128 × 64) | STEMMA QT port 1, at 0x3D or 0x3C. Found at start-up and every 2 s while missing; shows each new image |
 | Console | USB-C (USB Serial/JTAG) |
 
 Port 2 has no pull-up resistors on the Feather and the bare sensor has none either, so the sensor carrier has two 4.7 kΩ resistors from SDA and SCL to 3.3 V. Pins planned for the rest of the build: trigger IO5, menu button IO6, buzzer IO12, laser IO14 (through a transistor).
